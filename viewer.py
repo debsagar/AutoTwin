@@ -7,6 +7,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from environment import _termination_evidence
+from workspace import output_root
 
 ROOT = Path(__file__).resolve().parent
 
@@ -14,7 +15,7 @@ ROOT = Path(__file__).resolve().parent
 def export_view(name: str) -> dict:
     if not name or Path(name).name != name or name in {'.', '..'}:
         raise ValueError('name must be one environment directory name')
-    bundle = ROOT / 'runs' / 'environments' / name
+    bundle = output_root(ROOT) / 'environments' / name
     manifest = json.loads((bundle / 'manifest.json').read_text())
     if manifest.get('status') != 'generated_unvalidated':
         raise ValueError('Export requires a successful current build; stale artifacts are not exported.')

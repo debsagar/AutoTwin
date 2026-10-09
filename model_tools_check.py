@@ -86,7 +86,7 @@ def main():
         assert not comparison['comparable'] and 'seeds' in comparison['protocol_differences'][0]
     registered = {}
     with patch.object(process_mining, 'install_runtime_policy'):
-        asyncio.run(process_mining.extension(SimpleNamespace(register_tool=lambda tool: registered.update({tool.__name__: tool}))))
+        asyncio.run(process_mining.extension(SimpleNamespace(register_middleware=lambda middleware: None, register_tool=lambda tool: registered.update({tool.__name__: tool}))))
     for error in (RuntimeError('simulation failed'), TimeoutExpired('simulation', 600)):
         with patch('validation.evaluate_environment', side_effect=error):
             result = registered['evaluate_environment']('candidate')

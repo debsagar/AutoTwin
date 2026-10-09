@@ -227,6 +227,8 @@ async def extension(api):
     if root not in sys.path:
         sys.path.insert(0, root)
     install_runtime_policy()
+    from workspace import middleware
+    api.register_middleware(middleware())
     from functools import wraps
 
     def recoverable(tool):

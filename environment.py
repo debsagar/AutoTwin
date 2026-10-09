@@ -13,7 +13,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from workspace import output_root, subprocess_env
+
 ROOT = Path(__file__).resolve().parent
+
 SEED = 42
 COLUMNS = ['case_id', 'activity', 'resource', 'start_time', 'end_time']
 
@@ -21,7 +24,7 @@ COLUMNS = ['case_id', 'activity', 'resource', 'start_time', 'end_time']
 def _bundle(name):
     if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,79}', name):
         raise ValueError('Use a name of 1..80 letters, numbers, underscores or hyphens.')
-    return ROOT / 'runs' / 'environments' / name
+    return output_root(ROOT) / 'environments' / name
 
 
 def _write_json(path, value):
@@ -267,7 +270,7 @@ def build_environment(name: str, estimate_missing_starts: bool = False, settings
     try:
         result = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--build', name,
                                  str(int(estimate_missing_starts)), json.dumps(settings)], capture_output=True, text=True,
-                                timeout=600, env={**os.environ, 'PYTHONHASHSEED': str(SEED)})
+                                timeout=600, cwd=bundle, env={**subprocess_env(), 'PYTHONHASHSEED': str(SEED)})
     except subprocess.TimeoutExpired:
         manifest['status'] = 'build_failed'
         manifest['error'] = 'Build exceeded the 600 second timeout.'
