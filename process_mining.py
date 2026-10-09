@@ -2,6 +2,7 @@
 from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import median
+from subprocess import TimeoutExpired
 
 
 def discover_process(path: str, max_cases: int = 5000) -> dict:
@@ -228,7 +229,7 @@ async def extension(api):
         def call(*args, **kwargs):
             try:
                 return tool(*args, **kwargs)
-            except (ValueError, OSError) as error:
+            except (ValueError, OSError, RuntimeError, TimeoutExpired) as error:
                 return {"status": "tool_error", "error": str(error), "error_type": type(error).__name__}
         return call
 

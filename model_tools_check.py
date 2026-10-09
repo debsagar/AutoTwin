@@ -1,11 +1,15 @@
 """Small check: evidence aggregation, candidate isolation, protocol compatibility."""
+import asyncio
 import json
+from subprocess import TimeoutExpired
+from types import SimpleNamespace
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import environment
 import model_tools as tools
+import process_mining
 
 
 def main():
@@ -59,6 +63,13 @@ def main():
         paths[1].write_text(json.dumps(report))
         comparison = tools.compare_evaluations([str(p) for p in paths])
         assert not comparison['comparable'] and 'seeds' in comparison['protocol_differences'][0]
+    registered = {}
+    with patch.object(process_mining, 'install_runtime_policy'):
+        asyncio.run(process_mining.extension(SimpleNamespace(register_tool=lambda tool: registered.update({tool.__name__: tool}))))
+    for error in (RuntimeError('simulation failed'), TimeoutExpired('simulation', 600)):
+        with patch('validation.evaluate_environment', side_effect=error):
+            result = registered['evaluate_environment']('candidate')
+            assert result['status'] == 'tool_error' and result['error_type'] == type(error).__name__
     print('model tools selfcheck passed')
 
 

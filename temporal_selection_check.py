@@ -36,6 +36,8 @@ def main():
                 assert not env._bundle(name).exists()
             else:
                 raise AssertionError('Expected rejection')
+        rejected('reversed', {'train': partitions['validation'], 'validation': partitions['train']})
+        rejected('reversed-test', {'train': partitions['validation'], 'test': partitions['train']})
         rejected('guard', partitions, 1)
         rejected('overlap', {**partitions, 'test': partitions['train']})
         rejected('bad-date', {'train': {'start': 'bad', 'end': '2019-03-01T00:00:00Z'}})

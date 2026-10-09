@@ -151,6 +151,9 @@ def prepare_environment(path: str, name: str, partitions: dict,
     ordered = sorted(windows.values())
     if any(a[1] > b[0] for a, b in zip(ordered, ordered[1:])):
         raise ValueError('Time partitions must not overlap.')
+    chronological = [windows[s] for s in ('train', 'validation', 'test') if s in windows]
+    if chronological != sorted(chronological):
+        raise ValueError('Time partitions must follow train, validation, test chronological order.')
     bundle = _bundle(name)
     if bundle.exists():
         raise FileExistsError(f'{bundle} already exists; use a new name.')
