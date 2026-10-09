@@ -112,10 +112,11 @@ def build_environment(name: str, estimate_missing_starts: bool = False,
     generated artifacts. For missing starts, estimate_missing_starts=True records
     the chosen modeling assumption; estimated durations are not observed evidence.
     Supported settings: noise_threshold (0..1, default 0), gateway_method
-    ("discovery" or "equiprobable", default "discovery"), arrival_filter_outliers
+    ("discovery", "equiprobable", or "token_replay", default "discovery"), arrival_filter_outliers
     (bool, default False; PIX built-in interarrival outlier filtering). Filtering
     can collapse a batch-heavy log to zero interarrival time; inspect the fitted
-    distribution before accepting it. Equally likely routes
+    distribution before accepting it. token_replay counts complete PM4Py training
+    replays, including silent loop exits, and rejects incomplete replay. Equally likely routes
     are an explicit alternative assumption, not learned probabilities. Increasing
     noise_threshold prunes infrequent behavior; inspect omitted activities before
     treating a smaller distance as a defensible improvement.
@@ -142,6 +143,7 @@ def inspect_environment(name: str, split: str = "train",
                         evaluation: str | None = None, seed: int | None = None) -> dict:
     """Read recorded and generated activity counts, repetitions, timings and
     model routing. Optionally inspect a particular evaluation report and seed.
+    evaluation is an absolute or project-relative report/directory path, not its basename.
     Use evidence to explain discrepancies before choosing a revision.
     """
     from model_tools import inspect_environment as inspect
@@ -152,7 +154,7 @@ def revise_environment(source: str, name: str, reason: str, settings: dict) -> d
     """Build a separate candidate from the same input partitions. Supply an
     evidence-based reason and supported discovery settings. Source artifacts are
     preserved; evaluate the candidate with the same validation experiment. Settings
-    are noise_threshold (0..1), gateway_method (discovery or equiprobable),
+    are noise_threshold (0..1), gateway_method (discovery, equiprobable, or token_replay),
     and arrival_filter_outliers (bool; PIX built-in filtering).
     Omitted settings inherit the source settings.
     """

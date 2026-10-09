@@ -33,21 +33,26 @@ The default CLI runs tools directly on this VM, not in a sandbox. Restarting
 reloads Python code; it does not undo file changes or guarantee that interrupted
 work has completed. Inspect the saved results before continuing.
 
-For example:
+## Run Stage 1 inside the CLI
 
-> Investigate the BPI 2019 data for a small procurement simulation. Inspect the
-> coverage and propose suitable periods and a cohort. Explain what we lose by
-> selecting them before building anything.
+Enter this in the interactive agent, not in your shell:
 
-To finish calibration of an existing model:
+```text
+/skill:stage1 data/bpi2019/BPI_Challenge_2019.xes — complete Stage 1, with at most two evidence-backed revisions
+```
 
-> Investigate my-procurement, test justified revisions in separate candidates,
-> and compare them under the same validation experiment. Explain which candidate
-> you select, what it loses, and what remains unsupported. Export its replay.
-> Keep the original and do not use test data to choose a candidate.
+This native slash command delegates discovery, generation, validation, candidate
+selection, final assessment, replay export and reporting to the agent. Replace
+the dataset and constraints as needed. It preserves native tool approvals;
+it does not launch a separate scripted workflow. Use `/reload` to refresh skills
+in an already-open CLI, or restart to load changed Python tools.
 
-No special tool names are required in conversation. Explicit skills remain
-available as `/skill:discover-operation` and `/skill:generate-environment`.
+The agent owns technical choices within that task. It asks only for missing
+business facts essential to proceed. Invalid simulations cannot be selected;
+the result can be **no acceptable candidate**. Stage 2 remains separate.
+
+Ordinary conversation also works. Narrower skills remain available as
+`/skill:discover-operation` and `/skill:generate-environment`.
 
 ## Capabilities
 
@@ -76,13 +81,14 @@ The XES mapping is trace ID, activity, completion timestamp, optional
 
 Building does not access validation or test files. Evaluation is a separate
 agent choice. `metrics=None` returns the metric catalog without simulating;
-otherwise supply metric names and explicit seeds. Results include each run,
+otherwise supply metric names and explicit seeds. Each evaluation also computes
+PM4Py alignment-based fitness and precision against the observed split. Results include each run,
 mean, standard deviation, metric definitions and input hashes. They are written
 to unique `evaluations/` folders; the model and baseline are unchanged.
 
 Completion-only metrics cover activity trigrams, first-to-last completion spans,
 first-completion arrival proxies, within-case completion timing and weekly
-completion patterns. These use `log-distance-measures`. Full start-to-end cycle
+completion patterns, plus absolute completion timestamps. These use `log-distance-measures`. Full start-to-end cycle
 time and first-start arrival metrics require recorded starts. Resource workload
 metrics are not implemented. No metric threshold declares a model valid.
 
@@ -99,7 +105,12 @@ Important limits:
   A good historical distance does not establish intervention validity.
 - The agent can investigate, revise and compare candidates. Supported discovery
   settings are Inductive Miner `noise_threshold` and PIX `gateway_method`
-  (`discovery` or `equiprobable`). Pruning may omit rare behavior; equiprobable
+  (`discovery`, `equiprobable`, or `token_replay`), plus PIX `arrival_filter_outliers`.
+  `token_replay` counts complete PM4Py training replays, including silent loop
+  exits; it rejects incomplete replay and currently supports exclusive/parallel
+  gateways. It does not make timing assumptions or intervention effects valid.
+  Arrival filtering is an explicit assumption and can collapse batch-heavy
+  arrivals to zero gaps. Pruning may omit rare behavior; equiprobable
   routing is an assumption, not learned behavior. No numerical optimizer or
   Stage 2 operational intervention/agent-policy evaluation is implemented.
 
@@ -110,10 +121,8 @@ Models live in `runs/environments/<name>/`: manifest, named partition CSVs,
 evaluations and optional HTML. Existing prepared names are not overwritten.
 Rebuilding updates model/baseline; export the HTML again afterward.
 
-`bpi2019-demo` and `artifacts/autotwin-stage1.html` are preserved **legacy**
-examples using random reservoir selection and a random held-out split. Their
-reported 40-day versus 67-day median spans are prototype diagnostics, not a
-validated assessment. New preparation no longer uses that selection protocol.
+Older runs are retained as development evidence under `runs/`. Their results
+are not the final Stage 1 assessment. Use the trial evidence below; a completed workflow is not a fidelity pass.
 
 The visualization represents process activity stations, not recovered warehouse
 geometry. It replays simulator output; it does not run Python in the browser.
@@ -146,15 +155,44 @@ Methods: [generation skill](.deepagents/skills/generate-environment/SKILL.md).
 Data: [Boudewijn van Dongen, BPI Challenge 2019](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1), CC BY 4.0.
 Three.js attribution is in `visual/vendor/`.
 
-## Completed calibration example
+## Stage 1 trial evidence
 
-`runs/calibration-cli/` contains real Luna CLI evidence, compatible comparisons
-and the agent-written `selection.json`. The agent investigated excessive approval
-loops, tested noise thresholds 0.05 and 0.1, and selected
-`temporal-cli-demo-noise05`. Equal-case, equal-seed validation improved completion
-span and sequence distances; arrival-proxy distance worsened and rare behavior
-was omitted. The selection record includes both improvements and losses.
+The fresh CLI task, full transcript, agent performance counts, selection record,
+and final assessment are under `runs/stage1-transfer/`. The task uses the native
+CLI with a bounded run; no additional orchestrator or automatic grading model.
+Simulation fidelity and agent task completion are reported separately.
 
-The exported replay includes matching evaluation summaries. Preview copy:
-`artifacts/autotwin-calibrated.html`. This is a selected candidate with documented
-limitations, not a certified digital twin or final test-set result.
+- `report.md`: agent's model assessment and artifact paths.
+- `agent-metrics.json`: recorded calls, failures, runtime, tokens and cost.
+- `selection.json`: candidate choice recorded before final test evaluation.
+- `task.txt` and `transcript.json`: reproducible assignment and execution evidence.
+
+Process fitness/precision measure structural conformance. Log distances measure
+historical distribution similarity. Neither is a certificate of causal validity
+or a claim that staffing changes will have a predicted effect.
+
+The Terra comparison is in `runs/stage1-terra/` (actual model:
+`openai/gpt-5.6-terra`). Its historical baseline and final-test distances are
+invalid for selection: Prosimos terminated cases at its loop limit. The original
+agent report is preserved; `review.md` records the correction. Current tools
+reject these runs. Earlier Luna trials also showed large fidelity gaps.
+
+### Routing fidelity follow-up
+
+`gateway_method="token_replay"` fixes missed silent loop exits using complete
+training replays. It leaves the BPMN, fitted timings, arrivals and resources
+unchanged. Three-seed validation on the larger saved cohort reduced trigram
+distance from 0.629 to 0.443 and completion-span distance from 1,047 to 410 hours.
+Circadian distance did not improve (5.663 to 5.679 hours). These are validation
+diagnostics, not a new held-out test or an operational-validity pass.
+
+- `runs/stage1-fidelity/report.md`: controlled two-cohort investigation.
+- `runs/stage1-fidelity-agent/report.md` and `review.md`: actual CLI agent run and independent audit.
+- `runs/stage1-fidelity-agent/agent-metrics.json`: 28 tool calls, three recovered
+  inspection-path errors, 319 seconds, recorded model cost about $0.075.
+- `artifacts/autotwin-stage1.html`: current agent-generated diagnostic replay.
+
+The comparison tool currently treats changed boundary-description prose as a
+protocol difference. The independent audit verifies that the historical and new
+runs used the same actual simulation settings; original reports are preserved.
+Timing mismatch and unavailable bounded alignment conformance remain limitations.
