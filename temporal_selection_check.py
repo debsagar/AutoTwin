@@ -26,6 +26,10 @@ def main():
         assert scope['monthly_first_observations'] == {'2018-12': 1, '2019-01': 2, '2019-02': 1}
         manifest = env.prepare_environment(str(source), 'ok', partitions, case_value='A')
         assert manifest['scope']['selected_cases'] == 2
+        assert manifest['scope']['split']['train']['activity_events'] == {'work': 2}
+        assert manifest['scope']['split']['train']['single_event_cases'] == 0
+        assert manifest['scope']['split']['validation']['activity_events'] == {'work': 1}
+        assert manifest['scope']['split']['validation']['single_event_cases'] == 1
         assert manifest['scope']['excluded']['boundary_crossing_cases'] == 2
         with (env._bundle('ok') / 'train.csv').open() as handle:
             assert len(list(csv.DictReader(handle))) == 2
