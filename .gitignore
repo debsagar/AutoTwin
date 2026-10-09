@@ -17,3 +17,6 @@ runs/
 AGENTS.md
 CLAUDE.md
 
+
+# Product runtime instructions belong in the source tree.
+!.deepagents/AGENTS.md

@@ -126,6 +126,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "deepagents-code", extra = ["openrouter"] },
+    { name = "log-distance-measures" },
     { name = "pix-framework" },
     { name = "pm4py" },
     { name = "prosimos" },
@@ -134,6 +135,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "deepagents-code", extras = ["openrouter"], specifier = "==0.1.83" },
+    { name = "log-distance-measures", specifier = "==2.2.0" },
     { name = "pix-framework", specifier = "==0.15.0" },
     { name = "pm4py", specifier = "==2.7.23.8" },
     { name = "prosimos", specifier = "==2.1.0" },

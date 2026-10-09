@@ -34,89 +34,165 @@ def _date(value):
     return dt.astimezone(timezone.utc)
 
 
-def prepare_environment(path: str, name: str, max_cases: int = 5000,
-                        case_attribute: str = 'Item Category',
-                        case_value: str = '3-way match, invoice before GR') -> dict:
-    """Normalize a whole-log reservoir cohort and split cases before any fitting.
-    Original files are read only. Missing starts require explicit build consent.
-    """
+def _source(path):
     source = Path(path).resolve()
     if not source.is_relative_to((ROOT / 'data').resolve()) or source.suffix.lower() != '.xes':
         raise ValueError('Select an .xes file inside data/.')
-    if type(max_cases) is not int or not 10 <= max_cases <= 50000:
-        raise ValueError('max_cases must be an integer from 10 to 50000.')
-    if not isinstance(case_attribute, str) or not case_attribute or not isinstance(case_value, str):
-        raise ValueError('Specify a case attribute and category string.')
-    bundle = _bundle(name)
-    if bundle.exists():
-        raise FileExistsError(f'{bundle} already exists; use a new name.')
-    rng, sampled, categories = random.Random(SEED), [], Counter()
-    total = eligible = empty = 0
-    quality = Counter()
-    # ponytail: XML streaming plus a bounded reservoir; no full-log dataframe.
+    return source
+
+
+def _source_digest(source):
+    digest = hashlib.sha256()
+    with source.open('rb') as handle:
+        for block in iter(lambda: handle.read(8 * 1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _traces(source, case_attribute):
+    """Yield all recorded rows, retaining complete observed traces in a streaming read."""
+    seen = set()
     context = ET.iterparse(source, events=('start', 'end'))
     _, xml_root = next(context)
     for event, element in context:
         if event != 'end' or element.tag.rsplit('}', 1)[-1] != 'trace':
             continue
-        total += 1
         attrs = {c.get('key'): c.get('value') for c in element if c.get('key')}
-        category = attrs.get(case_attribute, '(absent)')
-        categories[category] += 1
-        if category == case_value:
-            rows = []
-            case_id = attrs.get('concept:name')
-            if not case_id:
-                raise ValueError(f'Trace {total} has no case identifier.')
-            for child in element:
-                if child.tag.rsplit('}', 1)[-1] != 'event':
-                    continue
-                a = {c.get('key'): c.get('value') for c in child}
-                if not a.get('concept:name') or not a.get('time:timestamp'):
-                    raise ValueError(f'Case {case_id} has an event without activity or completion timestamp.')
-                end = _date(a['time:timestamp'])
-                start = _date(a['start_timestamp']) if a.get('start_timestamp') else None
-                if start and start > end:
-                    raise ValueError(f'Case {case_id} has a start after completion.')
-                resource = a.get('org:resource')
-                missing_resource = resource is None or resource.strip().lower() in {'', 'none', 'nan'}
-                rows.append([case_id, a['concept:name'], 'NOT_SET' if missing_resource else resource,
-                             start.isoformat() if start else '', end.isoformat()])
-            if not rows:
-                empty += 1
-            else:
-                eligible += 1
-                if len(sampled) < max_cases:
-                    sampled.append(rows)
-                else:
-                    j = rng.randrange(eligible)
-                    if j < max_cases:
-                        sampled[j] = rows
+        case_id = attrs.get('concept:name')
+        if not case_id or case_id in seen:
+            raise ValueError(f'Missing or duplicate case identifier: {case_id!r}.')
+        seen.add(case_id)
+        rows = []
+        for child in element:
+            if child.tag.rsplit('}', 1)[-1] != 'event':
+                continue
+            a = {c.get('key'): c.get('value') for c in child}
+            if not a.get('concept:name') or not a.get('time:timestamp'):
+                raise ValueError(f'Case {case_id} has an event without activity or completion timestamp.')
+            end = _date(a['time:timestamp'])
+            start = _date(a['start_timestamp']) if a.get('start_timestamp') else None
+            if start and start > end:
+                raise ValueError(f'Case {case_id} has a start after completion.')
+            resource = a.get('org:resource')
+            missing = resource is None or resource.strip().lower() in {'', 'none', 'nan'}
+            rows.append([case_id, a['concept:name'], 'NOT_SET' if missing else resource,
+                         start.isoformat() if start else '', end.isoformat()])
+        yield attrs.get(case_attribute, '(absent)'), rows
         element.clear()
         xml_root.clear()
-    if len(sampled) < 10:
-        raise ValueError(f'Only {len(sampled)} nonempty cases match {case_attribute}={case_value!r}; need 10.')
-    ids = [r[0][0] for r in sampled]
-    if len(set(ids)) != len(ids):
-        raise ValueError('Selected cases have duplicate identifiers.')
-    rng.shuffle(sampled)
-    heldout = max(1, round(len(sampled) * .2))
-    splits = {'heldout': sampled[:heldout], 'train': sampled[heldout:]}
-    dates = []
-    for rows in sampled:
+
+
+def _span(rows):
+    dates = [_date(value) for row in rows for value in row[3:5] if value]
+    return min(dates), max(dates)
+
+
+_SCOPE_CAVEAT = ('Spans use recorded starts when present and completion timestamps. Completion-only '
+                 'first observations are not measured case arrivals; full observed traces do not '
+                 'prove complete process histories. Category filtering omits other-category workload.')
+
+
+def inspect_log_scope(path: str, case_attribute: str = 'Item Category',
+                      case_value: str | None = None) -> dict:
+    """Read-only inventory for choosing explicit windows; no preparation or fitting."""
+    source = _source(path)
+    if not isinstance(case_attribute, str) or not case_attribute or (case_value is not None and not isinstance(case_value, str)):
+        raise ValueError('Specify a case attribute and optional category string.')
+    categories, first_months, last_months = Counter(), Counter(), Counter()
+    counts = Counter(dict.fromkeys(['source_events', 'matching_cases', 'matching_events', 'matching_empty_cases',
+                                   'other_category_cases_excluded', 'other_category_events_excluded', 'missing_starts'], 0))
+    earliest = latest = None
+    for category, rows in _traces(source, case_attribute):
+        categories[category] += 1
+        counts['source_events'] += len(rows)
+        if case_value is not None and category != case_value:
+            counts['other_category_cases_excluded'] += 1
+            counts['other_category_events_excluded'] += len(rows)
+            continue
+        counts['matching_cases'] += 1
+        counts['matching_events'] += len(rows)
+        if not rows:
+            counts['matching_empty_cases'] += 1
+            continue
+        begin, finish = _span(rows)
+        earliest = min(earliest, begin) if earliest else begin
+        latest = max(latest, finish) if latest else finish
+        first_months[begin.strftime('%Y-%m')] += 1
+        last_months[finish.strftime('%Y-%m')] += 1
+        counts['missing_starts'] += sum(not row[3] for row in rows)
+    return {'source': str(source), 'source_sha256': _source_digest(source), 'case_attribute': case_attribute, 'case_value': case_value,
+            'source_cases': sum(categories.values()), 'categories': dict(categories), **dict(counts),
+            'observed_date_range': [earliest.isoformat(), latest.isoformat()] if earliest else None,
+            'monthly_first_observations': dict(sorted(first_months.items())),
+            'monthly_last_observations': dict(sorted(last_months.items())), 'caveat': _SCOPE_CAVEAT}
+
+
+def prepare_environment(path: str, name: str, partitions: dict,
+                        max_cases: int = 5000, case_attribute: str = 'Item Category',
+                        case_value: str | None = None) -> dict:
+    """Select whole observed cases in [start, end); date-only bounds mean UTC midnight."""
+    source = _source(path)
+    if type(max_cases) is not int or not 1 <= max_cases <= 50000:
+        raise ValueError('max_cases must be an integer from 1 to 50000; it is a fail guard, not a sample size.')
+    if not isinstance(case_attribute, str) or not case_attribute or (case_value is not None and not isinstance(case_value, str)):
+        raise ValueError('Specify a case attribute and optional category string.')
+    if not isinstance(partitions, dict) or 'train' not in partitions or set(partitions) - {'train', 'validation', 'test'}:
+        raise ValueError('Supply train and optional validation/test partitions with start and end timestamps.')
+    windows = {}
+    for split, bounds in partitions.items():
+        if not isinstance(bounds, dict) or set(bounds) != {'start', 'end'} or not all(isinstance(v, str) for v in bounds.values()):
+            raise ValueError(f'{split} requires start and end timestamp strings.')
+        begin, finish = (_date(value + 'T00:00:00+00:00' if re.fullmatch(r'\d{4}-\d{2}-\d{2}', value) else value)
+                         for value in (bounds['start'], bounds['end']))
+        if begin >= finish:
+            raise ValueError(f'{split} start must be before end.')
+        windows[split] = (begin, finish)
+    ordered = sorted(windows.values())
+    if any(a[1] > b[0] for a, b in zip(ordered, ordered[1:])):
+        raise ValueError('Time partitions must not overlap.')
+    bundle = _bundle(name)
+    if bundle.exists():
+        raise FileExistsError(f'{bundle} already exists; use a new name.')
+    splits = {split: [] for split in windows}
+    categories, quality = Counter(), Counter()
+    excluded = Counter(dict.fromkeys(['other_category_cases', 'other_category_events', 'boundary_crossing_cases',
+                                     'boundary_crossing_events', 'outside_windows_cases', 'outside_windows_events'], 0))
+    selected = eligible = empty = 0
+    earliest = latest = None
+    for category, rows in _traces(source, case_attribute):
+        categories[category] += 1
+        if case_value is not None and category != case_value:
+            excluded['other_category_cases'] += 1
+            excluded['other_category_events'] += len(rows)
+            continue
+        if not rows:
+            empty += 1
+            continue
+        eligible += 1
+        begin, finish = _span(rows)
+        split = next((s for s, (left, right) in windows.items() if left <= begin and finish < right), None)
+        if split is None:
+            crossing = any(begin < boundary <= finish for window in windows.values() for boundary in window)
+            excluded['boundary_crossing_cases' if crossing else 'outside_windows_cases'] += 1
+            excluded['boundary_crossing_events' if crossing else 'outside_windows_events'] += len(rows)
+            continue
+        selected += 1
+        if selected > max_cases:
+            raise ValueError(f'Selected cases exceed max_cases={max_cases}; choose narrower windows or raise the guard. No cases were sampled or written.')
+        earliest = min(earliest, begin) if earliest else begin
+        latest = max(latest, finish) if latest else finish
         quality['cases_reordered_by_completion'] += int(rows != sorted(rows, key=lambda r: r[4]))
-        rows.sort(key=lambda r: r[4])  # stable order preserves ties, whose causal order is unknown
-        for row in rows:
-            dt = _date(row[4])
-            dates.append(dt)
-            quality['missing_starts'] += not bool(row[3])
-            quality['missing_resources'] += row[2] == 'NOT_SET'
-            quality['dates_outside_2018_2019'] += dt.year not in {2018, 2019}
+        rows.sort(key=lambda r: r[4])
+        quality['missing_starts'] += sum(not row[3] for row in rows)
+        quality['missing_resources'] += sum(row[2] == 'NOT_SET' for row in rows)
+        quality['dates_outside_2018_2019'] += sum(_date(row[4]).year not in {2018, 2019} for row in rows)
         quality['adjacent_completion_ties'] += sum(a[4] == b[4] for a, b in zip(rows, rows[1:]))
-    digest = hashlib.sha256()
-    with source.open('rb') as handle:
-        for block in iter(lambda: handle.read(8 * 1024 * 1024), b''):
-            digest.update(block)
+        splits[split].append(rows)
+    if not splits['train']:
+        raise ValueError('Train window contains no nonempty observed cases.')
+    if any(not traces for traces in splits.values()):
+        raise ValueError('Each requested partition must contain nonempty observed cases.')
+    source_digest = _source_digest(source)
     bundle.mkdir(parents=True)
     for split, traces in splits.items():
         with (bundle / f'{split}.csv').open('w', newline='') as handle:
@@ -124,22 +200,24 @@ def prepare_environment(path: str, name: str, max_cases: int = 5000,
             writer.writerow(COLUMNS)
             writer.writerows(row for trace in traces for row in trace)
     manifest = {
-        'name': name, 'status': 'prepared', 'source': str(source), 'source_sha256': digest.hexdigest(),
+        'name': name, 'status': 'prepared', 'source': str(source), 'source_sha256': source_digest,
         'mapping': {'case': 'trace concept:name', 'activity': 'concept:name', 'completion': 'time:timestamp',
                     'start': 'start_timestamp when present', 'resource': 'org:resource'},
-        'scope': {'case_attribute': case_attribute, 'case_value': case_value, 'source_cases': total,
-                  'categories': dict(categories), 'matching_nonempty_cases': eligible,
-                  'matching_empty_cases_excluded': empty, 'selected_cases': len(sampled),
-                  'selection': 'seeded reservoir across entire file', 'seed': SEED,
+        'scope': {'case_attribute': case_attribute, 'case_value': case_value,
+                  'source_cases': sum(categories.values()), 'categories': dict(categories),
+                  'matching_nonempty_cases': eligible, 'matching_empty_cases_excluded': empty,
+                  'selected_cases': selected, 'selection': 'full observed cases contained in named time windows [start, end)',
+                  'max_cases_guard': max_cases,
+                  'partitions': {s: {'start': a.isoformat(), 'end': b.isoformat()} for s, (a, b) in windows.items()},
                   'split': {s: {'cases': len(v), 'events': sum(map(len, v))} for s, v in splits.items()},
-                  'excluded': 'Other categories and matching empty cases; no date exclusions.'},
-        'quality': dict(quality), 'date_range': [min(dates).isoformat(), max(dates).isoformat()],
+                  'excluded': dict(excluded), 'caveat': _SCOPE_CAVEAT},
+        'quality': dict(quality), 'date_range': [earliest.isoformat(), latest.isoformat()],
         'prerequisites': {'measured_starts_available': quality['missing_starts'] == 0,
                           'missing_start_estimation_requires_explicit_consent': quality['missing_starts'] > 0},
-        'assumptions': ['NOT_SET represents missing external identities. Build supplies 200 synthetic slots to avoid treating all vendors as one worker; this capacity is assumed.',
+        'assumptions': ['NOT_SET represents missing external identities. Build supplies synthetic slots; this capacity is assumed.',
                         'Equal completion timestamps preserve file order; causal order is unknown.',
-                        'Unusual years are retained and counted, not silently discarded.',
-                        'Sampled case arrivals understate full-cohort workload; this is a bounded cohort environment.'],
+                        'Unusual years are retained and counted, not silently discarded.', _SCOPE_CAVEAT,
+                        'Boundary-crossing observed cases are excluded in full; their events are never truncated.'],
         'not_supported': ['Measured service durations without starts', 'Causal what-if claims',
                           'Stage 2 optimization or policy evaluation'],
         'sources': ['https://github.com/AutomatedProcessImprovement/pix-framework',
@@ -201,7 +279,8 @@ def _build(name, estimate):
     bundle = _bundle(name)
     manifest = json.loads((bundle / 'manifest.json').read_text())
     ids = EventLogIDs(case='case_id', activity='activity', resource='resource', start_time='start_time', end_time='end_time')
-    train = pd.read_csv(bundle / 'train.csv', dtype={'case_id': str, 'resource': str})
+    train = pd.read_csv(bundle / 'train.csv', dtype={'case_id': str, 'resource': str},
+                        keep_default_na=False, na_values={'start_time': ['']})
     for col in ['start_time', 'end_time']:
         train[col] = pd.to_datetime(train[col], utc=True)
     if train.start_time.isna().any():
@@ -247,12 +326,11 @@ def _build(name, estimate):
     run_simulation(str(bundle / 'model.bpmn'), str(bundle / 'parameters.json'), 200,
                    str(bundle / 'simulation_statistics.csv'), str(bundle / 'simulation.csv'),
                    starting_at=train.start_time.min().isoformat())
-    simulated = pd.read_csv(bundle / 'simulation.csv')
-    heldout = pd.read_csv(bundle / 'heldout.csv', dtype={'case_id': str})
-    _report(bundle, manifest, heldout, simulated, estimate)
+    simulated = pd.read_csv(bundle / 'simulation.csv', keep_default_na=False)
+    _report(bundle, manifest, simulated, estimate)
 
 
-def _report(bundle, manifest, heldout, simulated, estimated):
+def _report(bundle, manifest, simulated, estimated):
     import pandas as pd
     from importlib.metadata import version
     simulated.columns = [c.strip() for c in simulated.columns]
@@ -263,31 +341,26 @@ def _report(bundle, manifest, heldout, simulated, estimated):
         return {'cases': len(span), 'events': len(frame), 'activity_share': (counts / len(frame)).to_dict(),
                 'median_case_span_hours': float(((span.finish - span.begin).dt.total_seconds() / 3600).median()),
                 'events_per_case': float(len(frame) / len(span))}
-    observed = summary(heldout, 'case_id', 'activity', 'end_time', 'end_time')
     generated = summary(simulated, 'case_id', 'activity', 'end_time', 'end_time')
     generated['median_full_span_hours'] = summary(simulated, 'case_id', 'activity', 'start_time', 'end_time')['median_case_span_hours']
-    shares = set(observed['activity_share']) | set(generated['activity_share'])
-    difference = sum(abs(observed['activity_share'].get(a, 0) - generated['activity_share'].get(a, 0)) for a in shares) / 2
     valid = generated['cases'] == 200 and len(simulated) > 0 and (pd.to_datetime(simulated.start_time, utc=True) <= pd.to_datetime(simulated.end_time, utc=True)).all()
-    fitted = pd.read_csv(bundle / 'train_fitted.csv')
+    fitted = pd.read_csv(bundle / 'train_fitted.csv', keep_default_na=False)
     missing = fitted[fitted.resource == 'NOT_SET']
     estimated_duration = (pd.to_datetime(missing.end_time, utc=True, format='mixed') - pd.to_datetime(missing.start_time, utc=True, format='mixed')).dt.total_seconds() / 3600
     report = {'status': 'generated_unvalidated' if valid else 'simulation_check_failed', 'name': manifest['name'], 'bundle': str(bundle),
               'simulation': {'engine': 'Prosimos', 'seed': SEED, 'requested_cases': 200, 'valid_trace': bool(valid)},
-              'heldout': observed, 'generated': generated,
-              'comparison': {'activity_share_total_variation': difference,
-                             'case_span_ratio': generated['median_case_span_hours'] / observed['median_case_span_hours'] if observed['median_case_span_hours'] else None,
-                             'interpretation': 'Diagnostic only; mismatch is reported without calibration or a forced pass. Both case spans use first-to-last completion, and exclude first service. Generated full span is separately reported.'},
+              'generated': generated,
+              'evaluation': 'Not evaluated by build. Use evaluate_environment with an explicit split, metrics and seeds.',
               'assumptions': {'starts': 'PIX estimated on training cases only' if estimated else 'recorded',
                               'durations': 'estimated, not measured service times' if estimated else 'recorded start-to-end elapsed durations',
                               'calendars': 'PIX inferred availability, not documented staffing rosters',
                               'resource_cost': 'PIX default 20 per hour; not an observed financial input',
                               'missing_resources': 'NOT_SET uses 200 synthetic external slots and zero cost; assumed capacity, not measured staffing',
                               'estimated_start_range': [str(fitted.start_time.min()), str(fitted.start_time.max())],
-                              'arrivals': 'fitted on thinned training cohort; not full source workload'},
+                              'arrivals': 'fitted on selected training cases; category and boundary exclusions can omit competing workload'},
               'diagnosis': {'synthetic_resource_training_events': len(missing),
                             'synthetic_resource_median_estimated_duration_hours': float(estimated_duration.median()) if len(missing) else None,
-                            'interpretation': 'Missing identities use 200 synthetic external slots to avoid a single-vendor bottleneck. Long inferred durations and sampled arrivals remain assumptions; timing fidelity is unvalidated.'},
+                            'interpretation': 'Missing identities use 200 synthetic external slots to avoid a single-vendor bottleneck. Inferred durations and external capacity remain assumptions; timing fidelity is unvalidated.'},
               'versions': {p: version(p) for p in ['pm4py', 'pix-framework', 'prosimos']},
               'artifacts': ['model.bpmn', 'parameters.json', 'simulation.csv', 'simulation_statistics.csv', 'train_fitted.csv', 'build.log']}
     manifest.pop('error', None)

@@ -83,15 +83,27 @@ def discover_process(path: str, max_cases: int = 5000) -> dict:
     }
 
 
-def prepare_environment(path: str, name: str, max_cases: int = 5000,
-                        case_attribute: str = "Item Category",
-                        case_value: str = "3-way match, invoice before GR") -> dict:
-    """Prepare Stage 1 evidence and proposed assumptions; writes an environment
-    workspace. Review the returned assumptions before building unless the user
-    has explicitly authorized the full Stage 1 workflow.
+def inspect_log_scope(path: str, case_attribute: str = "Item Category",
+                      case_value: str | None = None) -> dict:
+    """Read full-log coverage and monthly observed case boundaries before choosing
+    time partitions. Optional category filter; does not fit or write a model.
+    """
+    from environment import inspect_log_scope as inspect
+    return inspect(path, case_attribute, case_value)
+
+
+def prepare_environment(path: str, name: str, partitions: dict,
+                        max_cases: int = 5000, case_attribute: str = "Item Category",
+                        case_value: str | None = None) -> dict:
+    """Prepare explicit nonoverlapping time partitions, e.g.
+    {"train": {"start": "2018-01-01", "end": "2018-05-01"},
+     "validation": {"start": "2018-05-01", "end": "2018-09-01"}}.
+    The caller chooses windows and cohort. Cases must fit wholly inside a window;
+    exclusions are counted. max_cases rejects oversized selections, never samples.
+    Writes evidence only. Missing starts need an accepted estimation policy to build.
     """
     from environment import prepare_environment as prepare
-    return prepare(path, name, max_cases, case_attribute, case_value)
+    return prepare(path, name, partitions, max_cases, case_attribute, case_value)
 
 
 def build_environment(name: str, estimate_missing_starts: bool = False) -> dict:
@@ -101,6 +113,20 @@ def build_environment(name: str, estimate_missing_starts: bool = False) -> dict:
     """
     from environment import build_environment as build
     return build(name, estimate_missing_starts)
+
+
+def evaluate_environment(name: str, split: str = "validation",
+                         metrics: list[str] | None = None,
+                         seeds: list[int] | None = None,
+                         cases: int | None = None,
+                         starting_at: str | None = None) -> dict:
+    """Inspect available log-distance metrics (metrics=None), or simulate and
+    compare selected metrics across explicit seeds against a chosen partition.
+    Writes a separate evaluation; never changes the fitted model. Choose test
+    only for final assessment, not iterative tuning. No automatic pass threshold.
+    """
+    from validation import evaluate_environment as evaluate
+    return evaluate(name, split, metrics, seeds, cases, starting_at)
 
 
 def export_view(name: str) -> dict:
@@ -141,7 +167,7 @@ def install_runtime_policy():
 
     def interrupts(**kwargs):
         policies = native_interrupts(**kwargs)
-        for name in ("prepare_environment", "build_environment", "export_view"):
+        for name in ("prepare_environment", "build_environment", "evaluate_environment", "export_view"):
             policies[name] = {
                 **policies["write_file"],
                 "description": f"{name}: write AutoTwin environment artifacts.",
@@ -160,5 +186,5 @@ async def extension(api):
     if root not in sys.path:
         sys.path.insert(0, root)
     install_runtime_policy()
-    for tool in (discover_process, prepare_environment, build_environment, export_view):
+    for tool in (discover_process, inspect_log_scope, prepare_environment, build_environment, evaluate_environment, export_view):
         api.register_tool(tool)

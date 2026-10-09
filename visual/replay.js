@@ -226,7 +226,9 @@ $("step").onclick = () => {
 };
 const comparison = DATA.report.comparison || {};
 $("notice").textContent =
-  `Validation mismatch: generated / held-out median case span ratio ${Number(comparison.case_span_ratio || 0).toFixed(2)}×; activity-share total variation ${Number(comparison.activity_share_total_variation || 0).toFixed(3)}. Diagnostic model, not calibrated operational predictions.`;
+  comparison.case_span_ratio != null
+    ? `Legacy diagnostic: generated / held-out median span ${Number(comparison.case_span_ratio).toFixed(2)}×; activity-share distance ${Number(comparison.activity_share_total_variation).toFixed(3)}. Not evidence of operational validity.`
+    : "Generated model; evaluation is separate. Ask the CLI agent to evaluate a selected partition and explain its report. This replay is not evidence of operational validity.";
 $("evidence").textContent = JSON.stringify(
   DATA.report.assumptions || {},
   null,

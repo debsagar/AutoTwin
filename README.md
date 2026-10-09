@@ -1,7 +1,8 @@
 # AutoTwin — Stage 1
 
-A conversational terminal agent that turns a selected event log into a candidate
-business-process simulation. The first working example is **BPI 2019 procurement**.
+A conversational terminal agent that turns selected event-log evidence into a
+candidate business-process simulation. The agent chooses scope and diagnostics;
+tools execute extraction, discovery, simulation and comparison.
 
 ## Open the agent
 
@@ -10,87 +11,110 @@ cd /data/autotwin
 uv run python main.py
 ```
 
-Python 3.12 and uv are required. Credentials stay in the local `.env`.
-Startup is idle. Manual mode keeps native approval prompts for writing tools.
-Only AutoTwin's project skills are exposed; developer skills are excluded.
+Python 3.12 and uv are required. Credentials stay in local `.env`. Startup is
+idle. Native Manual mode retains approvals for writing tools. Product skills
+come only from `.deepagents/skills/`; sessions stay in `.dcode/`.
 
-Inside the conversation, start with:
+For example:
 
-```text
-/skill:discover-operation data/bpi2019/BPI_Challenge_2019.xes
-```
+> Investigate the BPI 2019 data for a small procurement simulation. Inspect the
+> coverage and propose suitable periods and a cohort. Explain what we lose by
+> selecting them before building anything.
 
-To request the complete first stage, say:
+Or, with an existing model:
 
-> Generate an environment from data/bpi2019/BPI_Challenge_2019.xes called
-> my-procurement. Use 1,000 invoice-before-GR cases. I accept estimated missing
-> start times and synthetic external capacity for missing resource identities.
-> Build the baseline and export the offline 3D view. Stop at Stage 1.
+> Assess the environment named my-procurement. Choose useful diagnostics from
+> the available timestamps and compare several simulation runs with validation
+> data. Explain the mismatches and which assumptions deserve investigation.
 
-The agent calls tools, explains evidence and assumptions, and stops at your
-requested scope. It does not run a pipeline just because data is present.
+No special tool names are required in conversation. Explicit skills remain
+available as `/skill:discover-operation` and `/skill:generate-environment`.
 
-## What Stage 1 does
+## Capabilities
 
 | Agent tool | Result |
 |---|---|
-| `discover_process` | Observed flows, variants and handovers through PM4Py. Default: first 5,000 cases, explicitly a file prefix. |
-| `prepare_environment` | Selects a category with seeded reservoir sampling across the whole XES file; writes source hash, prerequisites, raw timestamps, and disjoint train/held-out cases. |
-| `build_environment` | Uses PM4Py's Inductive Miner for BPMN, PIX for parameter estimation, and Prosimos for a 200-case discrete-event simulation. Reports held-out differences. |
-| `export_view` | Writes a standalone Three.js HTML replay using the generated BPMN and execution trace. No server or internet is needed to open it. |
+| `discover_process` | Exploratory PM4Py paths and handovers from a disclosed file prefix. |
+| `inspect_log_scope` | Full-file coverage, categories and monthly first/last observed case timestamps. |
+| `prepare_environment` | Whole observed cases in caller-chosen train/validation/test windows; optional cohort filter, source hash and exclusion counts. |
+| `build_environment` | PM4Py BPMN, PIX parameters and a 200-case Prosimos execution check, fitted on train only. |
+| `evaluate_environment` | Available metric catalog or selected log-distance comparisons across caller-chosen seeds and partition. |
+| `export_view` | Standalone offline Three.js replay of the generated baseline trace. |
 
-Generated files live in `runs/environments/<name>/`: `manifest.json`,
-`train.csv`, `heldout.csv`, `train_fitted.csv`, `model.bpmn`, `parameters.json`,
-`simulation.csv`, `simulation_statistics.csv`, `report.json`, and `environment.html`.
-Existing prepared names are not silently overwritten. A requested rebuild updates
-the model and run; export the view again after rebuilding.
+Preparation takes explicit half-open windows, for example
+`{"train":{"start":"2018-01-01","end":"2018-04-01"}}`; dates mean UTC
+midnight. Validation and test windows are optional. There is no automatic split
+ratio or category. `max_cases` rejects an oversized selection rather than
+randomly dropping cases. An overlap or empty requested partition is rejected.
 
-The XES mapping is explicit: trace identifier, activity, completion timestamp,
-optional `start_timestamp`, and resource. Other input formats still need a field
-mapping/conversion discussion. This is not an arbitrary-file-to-twin promise.
+The XES mapping is trace ID, activity, completion timestamp, optional
+`start_timestamp`, and resource. Other formats need a mapping/conversion first.
 
-## Inspect the working example
+## Evaluation, not automatic certification
 
-Open `runs/environments/bpi2019-demo/environment.html` in a browser, or copy it
-to your local machine. Select a case, play, scrub time, step events, or click a
-station. The scene represents the discovered process; its layout is illustrative,
-not a recovered warehouse floor. It replays real **simulator output**.
+Building does not access validation or test files. Evaluation is a separate
+agent choice. `metrics=None` returns the metric catalog without simulating;
+otherwise supply metric names and explicit seeds. Results include each run,
+mean, standard deviation, metric definitions and input hashes. They are written
+to unique `evaluations/` folders; the model and baseline are unchanged.
 
-The example selected 1,000 cases from 221,010 matching cases in the full log:
-800 train and 200 held out. It generated **200 cases / 1,012 events**.
-Median first-to-last completion span is about **40 days generated / 67 days
-held out**. Its status is **`generated_unvalidated`**.
+Completion-only metrics cover activity trigrams, first-to-last completion spans,
+first-completion arrival proxies, within-case completion timing and weekly
+completion patterns. These use `log-distance-measures`. Full start-to-end cycle
+time and first-start arrival metrics require recorded starts. Resource workload
+metrics are not implemented. No metric threshold declares a model valid.
 
-Important assumptions remain visible in the artifact and report:
+Important limits:
 
-- Missing starts are estimated on training cases only. They are not measured
-  service times. Availability calendars are inferred, not staffing rosters.
-- Missing resource identities use synthetic external slots to avoid making
-  unrelated vendors queue behind one invented worker. These are not employees.
-- Arrivals describe a thinned cohort, not the full company's workload.
-- The case-level held-out comparison is diagnostic; it does not validate
-  business rules, staffing interventions, or causal effects of new actions.
+- Whole-case containment excludes crossing cases and favors shorter cases near
+  boundaries. Category filtering can omit competing work. Neither restores the
+  full operation; the agent must assess those exclusions.
+- Completion-only logs do not measure work duration or true case arrivals.
+  Missing starts require accepted PIX estimation. Inferred calendars are not
+  staffing rosters; missing identities retain the prototype's assumed 200
+  external slots, not measured employees.
+- Evaluation starts with an empty system, without warm-up or existing backlog.
+  A good historical distance does not establish intervention validity.
+- The agent chooses scope and diagnostics. The current builder still uses fixed
+  Inductive Miner and PIX fitting methods. Automated calibration/optimization and
+  Stage 2 process changes or agent-policy evaluation are not implemented.
 
-**Stage 2**—process changes, optimization, and agent evaluation—is not implemented.
+## Files and prior example
+
+Models live in `runs/environments/<name>/`: manifest, named partition CSVs,
+`train_fitted.csv`, BPMN, parameter JSON, baseline simulation, build report,
+evaluations and optional HTML. Existing prepared names are not overwritten.
+Rebuilding updates model/baseline; export the HTML again afterward.
+
+`bpi2019-demo` and `artifacts/autotwin-stage1.html` are preserved **legacy**
+examples using random reservoir selection and a random held-out split. Their
+reported 40-day versus 67-day median spans are prototype diagnostics, not a
+validated assessment. New preparation no longer uses that selection protocol.
+
+The visualization represents process activity stations, not recovered warehouse
+geometry. It replays simulator output; it does not run Python in the browser.
 
 ## Small implementation
 
-`main.py` launches dcode. `process_mining.py` exposes the four tools and local
-runtime policy. `environment.py` builds the model using established libraries.
-`viewer.py` and `visual/` export the view. `intake.py` retains read-only file
-inspection helpers. The obsolete automatic intake script was removed.
+`main.py` launches dcode. `process_mining.py` registers tools and the local skill
+and approval compatibility overrides. `environment.py` prepares and builds;
+`validation.py` runs comparisons; `viewer.py` and `visual/` export the replay.
+Versions are pinned. No custom chat store or orchestration framework.
 
-The dcode extension and skill-isolation integration uses two narrowly scoped
-compatibility overrides; tested versions are pinned in `pyproject.toml`/`uv.lock`.
-Sessions are local in `.dcode/` (`/threads` in the terminal). No custom chat store.
+Focused developer checks:
 
-Verification evidence is in `runs/stage1-cli/` and the example's `check.json`.
-`uv run python runs/check_environment.py runs/environments/bpi2019-demo --rebuild`
-checks complete-build reproducibility plus replay and scheduling invariants.
-`uv run python viewer.py` checks offline export. These are development checks,
-not alternative user workflows. No unit-test framework was added.
+```sh
+uv run python temporal_selection_check.py
+uv run python validation.py --selfcheck
+uv run python viewer.py
+```
 
-Methods and source references: [discovery notes](.deepagents/skills/discover-operation/discovery-notes.md).
-Development history: [PROJECT-LOG.jsonl](PROJECT-LOG.jsonl).
-Example data: [Boudewijn van Dongen, BPI Challenge 2019](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1), CC BY 4.0.
-Three.js is vendored under MIT; attribution and source are in `visual/vendor/`.
+These check implementation integrity, not operational validity. Real CLI evidence
+for this revision is recorded under `runs/temporal-cli/`; Luna selected a
+2-way-match cohort, generated a model, evaluated two seeds and reported a severe
+mismatch. Successful tooling does not mean successful modeling. Development
+history is in [PROJECT-LOG.jsonl](PROJECT-LOG.jsonl).
+
+Methods: [generation skill](.deepagents/skills/generate-environment/SKILL.md).
+Data: [Boudewijn van Dongen, BPI Challenge 2019](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1), CC BY 4.0.
+Three.js attribution is in `visual/vendor/`.
