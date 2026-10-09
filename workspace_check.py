@@ -33,8 +33,9 @@ async def check(root):
             env = workspace.subprocess_env()
             assert env['AUTOTWIN_THREAD_ID'] == thread
             child = subprocess.check_output([sys.executable, '-c',
-                'import environment; print(environment._bundle("same-name"))'], env=env, text=True).strip()
-            assert child.endswith(f'/runs/workspaces/{thread}/environments/same-name')
+                'import environment, sys; from pathlib import Path; environment.ROOT = Path(sys.argv[1]); '
+                'print(environment._bundle("same-name"))', str(root)], env=env, text=True).strip()
+            assert Path(child) == before
             return before
         return await middleware.awrap_tool_call(request(thread), handler)
     first, second = await asyncio.gather(run('thread-a'), run('thread-b'))
@@ -62,6 +63,12 @@ async def check(root):
     lines = subprocess.check_output(['bash', '-c', result['command']], text=True).splitlines()
     assert lines == [str(first.parent.parent), 'thread-a']
     assert environment._bundle('legacy') == root / 'runs/environments/legacy'
+    from blockbuster import blockbuster_ctx
+    async def passthrough(req):
+        return req
+    with blockbuster_ctx(scanned_modules=[workspace]):
+        await middleware.awrap_model_call(model, passthrough)
+        await middleware.awrap_tool_call(request('thread-a', 'read_file', {'file_path': 'report.md'}), passthrough)
 
 
 if __name__ == '__main__':

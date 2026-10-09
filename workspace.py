@@ -1,4 +1,5 @@
 """Conversation output paths; native dcode owns conversation persistence."""
+import asyncio
 from contextvars import ContextVar
 import os
 from pathlib import Path
@@ -73,7 +74,7 @@ def middleware():
             return handler(self.model_request(request))
 
         async def awrap_model_call(self, request, handler):
-            return await handler(self.model_request(request))
+            return await handler(await asyncio.to_thread(self.model_request, request))
 
         def tool_request(self, request):
             workspace = output_root()
@@ -111,7 +112,7 @@ def middleware():
         async def awrap_tool_call(self, request, handler):
             token = _thread.set(conversation_id(request.runtime))
             try:
-                prepared = self.tool_request(request)
+                prepared = await asyncio.to_thread(self.tool_request, request)
                 return prepared if isinstance(prepared, ToolMessage) else await handler(prepared)
             finally:
                 _thread.reset(token)
