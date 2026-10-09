@@ -383,7 +383,7 @@ def _token_gateway_probabilities(train, bpmn):
         raise ValueError('Gateway token replay supports exclusive and parallel gateways only.')
     net, initial, final, flow_places, _ = to_petri_net.apply(
         bpmn, parameters={'return_flow_trans_map': True})
-    branches = {flow: place for flow, place in flow_places.items()
+    branches = {flow: place for flow, place in sorted(flow_places.items(), key=lambda item: str(item[0].get_id()))
                 if isinstance(flow.get_source(), pm4py.objects.bpmn.obj.BPMN.ExclusiveGateway)
                 and len(flow.get_source().get_out_arcs()) > 1}
     transitions = {next(iter(place.in_arcs)).source: flow for flow, place in branches.items()}
