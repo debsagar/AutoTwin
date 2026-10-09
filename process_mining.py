@@ -106,13 +106,19 @@ def prepare_environment(path: str, name: str, partitions: dict,
     return prepare(path, name, partitions, max_cases, case_attribute, case_value)
 
 
-def build_environment(name: str, estimate_missing_starts: bool = False) -> dict:
+def build_environment(name: str, estimate_missing_starts: bool = False,
+                      settings: dict | None = None) -> dict:
     """Build the executable Stage 1 environment from prepared evidence. Writes
     generated artifacts. Missing starts require an explicitly accepted estimation
     policy; estimated service durations are assumptions, not observed evidence.
+    Supported settings: noise_threshold (0..1, default 0), gateway_method
+    ("discovery" or "equiprobable", default "discovery"). Equally likely routes
+    are an explicit alternative assumption, not learned probabilities. Increasing
+    noise_threshold prunes infrequent behavior; inspect omitted activities before
+    treating a smaller distance as a defensible improvement.
     """
     from environment import build_environment as build
-    return build(name, estimate_missing_starts)
+    return build(name, estimate_missing_starts, settings)
 
 
 def evaluate_environment(name: str, split: str = "validation",
@@ -127,6 +133,35 @@ def evaluate_environment(name: str, split: str = "validation",
     """
     from validation import evaluate_environment as evaluate
     return evaluate(name, split, metrics, seeds, cases, starting_at)
+
+
+def inspect_environment(name: str, split: str = "train",
+                        evaluation: str | None = None, seed: int | None = None) -> dict:
+    """Read recorded and generated activity counts, repetitions, timings and
+    model routing. Optionally inspect a particular evaluation report and seed.
+    Use evidence to explain discrepancies before choosing a revision.
+    """
+    from model_tools import inspect_environment as inspect
+    return inspect(name, split, evaluation, seed)
+
+
+def revise_environment(source: str, name: str, reason: str, settings: dict) -> dict:
+    """Build a separate candidate from the same input partitions. Supply an
+    evidence-based reason and supported discovery settings. Source artifacts are
+    preserved; evaluate the candidate with the same validation experiment. Settings
+    are noise_threshold (0..1) and gateway_method (discovery or equiprobable).
+    Omitted settings inherit the source settings.
+    """
+    from model_tools import revise_environment as revise
+    return revise(source, name, reason, settings)
+
+
+def compare_evaluations(paths: list[str]) -> dict:
+    """Compare completed report files or evaluation directories. Report protocol differences before
+    interpreting metric changes; no automatic winner or validity threshold.
+    """
+    from model_tools import compare_evaluations as compare
+    return compare(paths)
 
 
 def export_view(name: str) -> dict:
@@ -167,7 +202,7 @@ def install_runtime_policy():
 
     def interrupts(**kwargs):
         policies = native_interrupts(**kwargs)
-        for name in ("prepare_environment", "build_environment", "evaluate_environment", "export_view"):
+        for name in ("prepare_environment", "build_environment", "revise_environment", "evaluate_environment", "export_view"):
             policies[name] = {
                 **policies["write_file"],
                 "description": f"{name}: write AutoTwin environment artifacts.",
@@ -186,5 +221,17 @@ async def extension(api):
     if root not in sys.path:
         sys.path.insert(0, root)
     install_runtime_policy()
-    for tool in (discover_process, inspect_log_scope, prepare_environment, build_environment, evaluate_environment, export_view):
-        api.register_tool(tool)
+    from functools import wraps
+
+    def recoverable(tool):
+        @wraps(tool)
+        def call(*args, **kwargs):
+            try:
+                return tool(*args, **kwargs)
+            except (ValueError, OSError) as error:
+                return {"status": "tool_error", "error": str(error), "error_type": type(error).__name__}
+        return call
+
+    for tool in (discover_process, inspect_log_scope, prepare_environment, build_environment,
+                 inspect_environment, revise_environment, evaluate_environment, compare_evaluations, export_view):
+        api.register_tool(recoverable(tool))

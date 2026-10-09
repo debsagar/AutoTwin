@@ -21,11 +21,12 @@ For example:
 > coverage and propose suitable periods and a cohort. Explain what we lose by
 > selecting them before building anything.
 
-Or, with an existing model:
+To finish calibration of an existing model:
 
-> Assess the environment named my-procurement. Choose useful diagnostics from
-> the available timestamps and compare several simulation runs with validation
-> data. Explain the mismatches and which assumptions deserve investigation.
+> Investigate my-procurement, test justified revisions in separate candidates,
+> and compare them under the same validation experiment. Explain which candidate
+> you select, what it loses, and what remains unsupported. Export its replay.
+> Keep the original and do not use test data to choose a candidate.
 
 No special tool names are required in conversation. Explicit skills remain
 available as `/skill:discover-operation` and `/skill:generate-environment`.
@@ -37,7 +38,10 @@ available as `/skill:discover-operation` and `/skill:generate-environment`.
 | `discover_process` | Exploratory PM4Py paths and handovers from a disclosed file prefix. |
 | `inspect_log_scope` | Full-file coverage, categories and monthly first/last observed case timestamps. |
 | `prepare_environment` | Whole observed cases in caller-chosen train/validation/test windows; optional cohort filter, source hash and exclusion counts. |
-| `build_environment` | PM4Py BPMN, PIX parameters and a 200-case Prosimos execution check, fitted on train only. |
+| `build_environment` | PM4Py BPMN, PIX parameters and a 200-case execution check, with explicit discovery settings and replay diagnostics. |
+| `inspect_environment` | Recorded/generated repetitions, timing and routing evidence for investigating a mismatch. |
+| `revise_environment` | Separate candidate built from unchanged partitions, inherited settings and a recorded reason. |
+| `compare_evaluations` | Metric results and settings, with experiment compatibility checks; no automatic winner. |
 | `evaluate_environment` | Available metric catalog or selected log-distance comparisons across caller-chosen seeds and partition. |
 | `export_view` | Standalone offline Three.js replay of the generated baseline trace. |
 
@@ -75,9 +79,11 @@ Important limits:
   external slots, not measured employees.
 - Evaluation starts with an empty system, without warm-up or existing backlog.
   A good historical distance does not establish intervention validity.
-- The agent chooses scope and diagnostics. The current builder still uses fixed
-  Inductive Miner and PIX fitting methods. Automated calibration/optimization and
-  Stage 2 process changes or agent-policy evaluation are not implemented.
+- The agent can investigate, revise and compare candidates. Supported discovery
+  settings are Inductive Miner `noise_threshold` and PIX `gateway_method`
+  (`discovery` or `equiprobable`). Pruning may omit rare behavior; equiprobable
+  routing is an assumption, not learned behavior. No numerical optimizer or
+  Stage 2 operational intervention/agent-policy evaluation is implemented.
 
 ## Files and prior example
 
@@ -98,7 +104,8 @@ geometry. It replays simulator output; it does not run Python in the browser.
 
 `main.py` launches dcode. `process_mining.py` registers tools and the local skill
 and approval compatibility overrides. `environment.py` prepares and builds;
-`validation.py` runs comparisons; `viewer.py` and `visual/` export the replay.
+`validation.py` runs comparisons; `model_tools.py` inspects and revises models;
+`viewer.py` and `visual/` export the replay with matching evaluation summaries.
 Versions are pinned. No custom chat store or orchestration framework.
 
 Focused developer checks:
@@ -106,6 +113,8 @@ Focused developer checks:
 ```sh
 uv run python temporal_selection_check.py
 uv run python validation.py --selfcheck
+uv run python calibration_build_check.py
+uv run python model_tools_check.py
 uv run python viewer.py
 ```
 
@@ -118,3 +127,16 @@ history is in [PROJECT-LOG.jsonl](PROJECT-LOG.jsonl).
 Methods: [generation skill](.deepagents/skills/generate-environment/SKILL.md).
 Data: [Boudewijn van Dongen, BPI Challenge 2019](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1), CC BY 4.0.
 Three.js attribution is in `visual/vendor/`.
+
+## Completed calibration example
+
+`runs/calibration-cli/` contains real Luna CLI evidence, compatible comparisons
+and the agent-written `selection.json`. The agent investigated excessive approval
+loops, tested noise thresholds 0.05 and 0.1, and selected
+`temporal-cli-demo-noise05`. Equal-case, equal-seed validation improved completion
+span and sequence distances; arrival-proxy distance worsened and rare behavior
+was omitted. The selection record includes both improvements and losses.
+
+The exported replay includes matching evaluation summaries. Preview copy:
+`artifacts/autotwin-calibrated.html`. This is a selected candidate with documented
+limitations, not a certified digital twin or final test-set result.

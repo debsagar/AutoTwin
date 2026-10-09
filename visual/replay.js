@@ -228,7 +228,9 @@ const comparison = DATA.report.comparison || {};
 $("notice").textContent =
   comparison.case_span_ratio != null
     ? `Legacy diagnostic: generated / held-out median span ${Number(comparison.case_span_ratio).toFixed(2)}×; activity-share distance ${Number(comparison.activity_share_total_variation).toFixed(3)}. Not evidence of operational validity.`
-    : "Generated model; evaluation is separate. Ask the CLI agent to evaluate a selected partition and explain its report. This replay is not evidence of operational validity.";
+    : DATA.report.evaluations?.length
+      ? `Generated model with ${DATA.report.evaluations.length} recorded evaluation(s). See the report below for metrics and limitations. Evaluated does not mean operationally validated.`
+      : "Generated model; evaluation is separate. Ask the CLI agent to evaluate a selected partition and explain its report. This replay is not evidence of operational validity.";
 $("evidence").textContent = JSON.stringify(
   DATA.report.assumptions || {},
   null,

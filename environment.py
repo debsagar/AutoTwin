@@ -2,6 +2,7 @@
 import csv
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -227,8 +228,25 @@ def prepare_environment(path: str, name: str, partitions: dict,
     return manifest
 
 
-def build_environment(name: str, estimate_missing_starts: bool = False) -> dict:
+def _discovery_settings(settings=None):
+    """Validate only discovery options supported by the installed libraries."""
+    if settings is None:
+        settings = {}
+    if not isinstance(settings, dict) or set(settings) - {'noise_threshold', 'gateway_method'}:
+        raise ValueError('settings accepts noise_threshold and gateway_method only.')
+    result = {'noise_threshold': 0.0, 'gateway_method': 'discovery', **settings}
+    noise = result['noise_threshold']
+    if type(noise) not in (int, float) or not math.isfinite(noise) or not 0 <= noise <= 1:
+        raise ValueError('noise_threshold must be a finite number from 0 to 1.')
+    if result['gateway_method'] not in ('discovery', 'equiprobable'):
+        raise ValueError('gateway_method must be discovery or equiprobable.')
+    result['noise_threshold'] = float(noise)
+    return result
+
+
+def build_environment(name: str, estimate_missing_starts: bool = False, settings: dict | None = None) -> dict:
     """Build PM4Py/PIX parameters and execute a seeded 200-case Prosimos baseline."""
+    settings = _discovery_settings(settings)
     bundle = _bundle(name)
     manifest = json.loads((bundle / 'manifest.json').read_text())
     if type(estimate_missing_starts) is not bool:
@@ -239,7 +257,7 @@ def build_environment(name: str, estimate_missing_starts: bool = False) -> dict:
     (bundle / 'report.json').unlink(missing_ok=True)
     try:
         result = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--build', name,
-                                 str(int(estimate_missing_starts))], capture_output=True, text=True,
+                                 str(int(estimate_missing_starts)), json.dumps(settings)], capture_output=True, text=True,
                                 timeout=600, env={**os.environ, 'PYTHONHASHSEED': str(SEED)})
     except subprocess.TimeoutExpired:
         manifest['status'] = 'build_failed'
@@ -256,7 +274,8 @@ def build_environment(name: str, estimate_missing_starts: bool = False) -> dict:
     return json.loads((bundle / 'report.json').read_text())
 
 
-def _build(name, estimate):
+def _build(name, estimate, settings=None):
+    settings = _discovery_settings(settings)
     # Child-process-only UUID stream: BPMN IDs affect set iteration and PIX replay.
     import uuid
     uuid_rng = random.Random(SEED)
@@ -272,14 +291,14 @@ def _build(name, estimate):
     from pix_framework.discovery.case_arrival import discover_case_arrival_model
     from pix_framework.discovery.resource_model import discover_resource_model
     from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import CalendarDiscoveryParameters, CalendarType
-    from pix_framework.discovery.gateway_probabilities import compute_gateway_probabilities
+    from pix_framework.discovery.gateway_probabilities import compute_gateway_probabilities, GatewayProbabilitiesDiscoveryMethod
     from prosimos.simulation_engine import run_simulation
     random.seed(SEED)
     np.random.seed(SEED)
     bundle = _bundle(name)
     manifest = json.loads((bundle / 'manifest.json').read_text())
     ids = EventLogIDs(case='case_id', activity='activity', resource='resource', start_time='start_time', end_time='end_time')
-    train = pd.read_csv(bundle / 'train.csv', dtype={'case_id': str, 'resource': str},
+    train = pd.read_csv(bundle / 'train.csv', dtype={'case_id': str, 'activity': str, 'resource': str},
                         keep_default_na=False, na_values={'start_time': ['']})
     for col in ['start_time', 'end_time']:
         train[col] = pd.to_datetime(train[col], utc=True)
@@ -290,7 +309,7 @@ def _build(name, estimate):
     if train.start_time.isna().any() or (train.start_time > train.end_time).any():
         raise ValueError('Start estimation left invalid durations.')
     train.to_csv(bundle / 'train_fitted.csv', index=False)
-    tree = pm4py.discover_process_tree_inductive(train, activity_key='activity', case_id_key='case_id', timestamp_key='end_time')
+    tree = pm4py.discover_process_tree_inductive(train, activity_key='activity', case_id_key='case_id', timestamp_key='end_time', noise_threshold=settings['noise_threshold'])
     from pm4py.objects.process_tree.obj import Operator
     def canonicalize(node):
         for child in node.children:
@@ -308,18 +327,30 @@ def _build(name, estimate):
     uuid.uuid4 = original_uuid4
     graph = BPMNGraph.from_bpmn_path(bundle / 'model.bpmn')
     # PIX discovers resource distributions by activity name; Prosimos requires BPMN IDs.
-    task_ids = {node.get_name(): node.get_id() for node in bpmn.get_nodes() if isinstance(node, pm4py.objects.bpmn.obj.BPMN.Task)}
+    tasks = [node for node in bpmn.get_nodes() if isinstance(node, pm4py.objects.bpmn.obj.BPMN.Task)]
+    task_ids = {node.get_name(): node.get_id() for node in tasks}
+    if len(task_ids) != len(tasks):
+        raise ValueError('Discovered BPMN has duplicate activity labels; resource mapping would be ambiguous.')
     resource = discover_resource_model(train, ids, CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE)).to_dict()
+    resource['task_resource_distribution'] = [d for d in resource['task_resource_distribution'] if d['task_id'] in task_ids]
     for distribution in resource['task_resource_distribution']:
         distribution['task_id'] = task_ids[distribution['task_id']]
     for profile in resource['resource_profiles']:
         for r in profile['resource_list']:
-            r['assignedTasks'] = [task_ids[t] for t in r['assignedTasks']]
+            r['assignedTasks'] = [task_ids[t] for t in r['assignedTasks'] if t in task_ids]
             if r['id'] == 'NOT_SET':
                 r['amount'] = 200  # assumed external capacity for this 200-case baseline
                 r['cost_per_hour'] = 0
+    model_train = train[train.activity.isin(task_ids)]
+    manifest['discovery_settings'] = settings
+    manifest['gateway_replay'] = _gateway_replay_diagnosis(model_train, ids, graph)
+    manifest['gateway_replay']['activities_omitted_by_discovery'] = train[~train.activity.isin(task_ids)].activity.value_counts().to_dict()
+    manifest['gateway_replay']['training_cases'] = int(train.case_id.nunique())
+    manifest['gateway_replay']['training_events'] = len(train)
+    manifest['gateway_replay']['replayed_events'] = len(model_train)
     parameters = {**resource, **discover_case_arrival_model(train, ids, filter_outliers=False).to_dict(),
-                  'gateway_branching_probabilities': [g.to_dict() for g in compute_gateway_probabilities(train, ids, graph)]}
+                  'gateway_branching_probabilities': [g.to_dict() for g in compute_gateway_probabilities(
+                      model_train, ids, graph, GatewayProbabilitiesDiscoveryMethod(settings['gateway_method']))]}
     _write_json(bundle / 'parameters.json', parameters)
     random.seed(SEED)
     np.random.seed(SEED)
@@ -328,6 +359,24 @@ def _build(name, estimate):
                    starting_at=train.start_time.min().isoformat())
     simulated = pd.read_csv(bundle / 'simulation.csv', keep_default_na=False)
     _report(bundle, manifest, simulated, estimate)
+
+
+def _gateway_replay_diagnosis(train, ids, graph):
+    """Expose PIX evidence; firing observed tasks does not prove terminal routing."""
+    from pix_framework.io.bpm_graph import BPMNNodeType
+    arcs, fully_fired, unfired = {}, 0, Counter()
+    for _, events in train.groupby(ids.case):
+        sequence = events.sort_values([ids.start_time, ids.end_time])[ids.activity].tolist()
+        correct, fired, _ = graph.replay_trace(sequence, arcs)
+        fully_fired += int(correct)
+        unfired.update(activity for activity, did_fire in zip(sequence, fired) if not did_fire)
+    return {'cases': int(train[ids.case].nunique()), 'cases_all_observed_tasks_fired': fully_fired,
+            'unfired_observed_tasks': dict(unfired),
+            'branch_frequencies': {node.id: {flow: arcs.get(flow, 0) for flow in node.outgoing_flows}
+                                   for node in graph.element_info.values()
+                                   if node.type in (BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY)
+                                   and len(node.outgoing_flows) > 1},
+            'caveat': 'PIX heuristic replay frequencies can omit invisible terminal paths. All observed tasks fired is not a complete alignment or proof that branch probabilities reproduce the training log.'}
 
 
 def _report(bundle, manifest, simulated, estimated):
@@ -349,6 +398,8 @@ def _report(bundle, manifest, simulated, estimated):
     estimated_duration = (pd.to_datetime(missing.end_time, utc=True, format='mixed') - pd.to_datetime(missing.start_time, utc=True, format='mixed')).dt.total_seconds() / 3600
     report = {'status': 'generated_unvalidated' if valid else 'simulation_check_failed', 'name': manifest['name'], 'bundle': str(bundle),
               'simulation': {'engine': 'Prosimos', 'seed': SEED, 'requested_cases': 200, 'valid_trace': bool(valid)},
+              'discovery_settings': manifest['discovery_settings'],
+              'gateway_replay': manifest['gateway_replay'],
               'generated': generated,
               'evaluation': 'Not evaluated by build. Use evaluate_environment with an explicit split, metrics and seeds.',
               'assumptions': {'starts': 'PIX estimated on training cases only' if estimated else 'recorded',
@@ -370,5 +421,5 @@ def _report(bundle, manifest, simulated, estimated):
     _write_json(bundle / 'report.json', report)
 
 
-if __name__ == '__main__' and len(sys.argv) == 4 and sys.argv[1] == '--build':
-    _build(sys.argv[2], bool(int(sys.argv[3])))
+if __name__ == '__main__' and len(sys.argv) in (4, 5) and sys.argv[1] == '--build':
+    _build(sys.argv[2], bool(int(sys.argv[3])), json.loads(sys.argv[4]) if len(sys.argv) == 5 else None)

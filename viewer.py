@@ -1,5 +1,6 @@
 """Export an offline replay of a generated process environment."""
 import csv
+import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,9 @@ def export_view(name: str) -> dict:
     if not name or Path(name).name != name or name in {'.', '..'}:
         raise ValueError('name must be one environment directory name')
     bundle = ROOT / 'runs' / 'environments' / name
+    manifest = json.loads((bundle / 'manifest.json').read_text())
+    if manifest.get('status') != 'generated_unvalidated':
+        raise ValueError('Export requires a successful current build; stale artifacts are not exported.')
     tree = ET.parse(bundle / 'model.bpmn')
     nodes, edges, positions = [], [], {}
     for element in tree.iter():
@@ -53,9 +57,19 @@ def export_view(name: str) -> dict:
     for row in records:
         for key in ('enable_time', 'start_time', 'end_time'):
             row[key] = datetime.fromisoformat(row[key]).timestamp() * 1000
+    report = json.loads((bundle / 'report.json').read_text())
+    model_hash = hashlib.sha256((bundle / 'model.bpmn').read_bytes()).hexdigest()
+    report['evaluations'] = []
+    for path in sorted((bundle / 'evaluations').glob('*/report.json')):
+        evaluation = json.loads(path.read_text())
+        inputs = evaluation.get('input_sha256', {})
+        if evaluation.get('status') == 'evaluated' and inputs.get('model.bpmn') == model_hash and all(
+                (bundle / name).is_file() and hashlib.sha256((bundle / name).read_bytes()).hexdigest() == digest
+                for name, digest in inputs.items()):
+            report['evaluations'].append({k: evaluation[k] for k in
+                ('split', 'cases', 'seeds', 'starting_at', 'summary', 'interpretation')})
     data = {'name': name, 'nodes': nodes, 'edges': edges, 'records': records,
-            'report': json.loads((bundle / 'report.json').read_text()),
-            'manifest': json.loads((bundle / 'manifest.json').read_text())}
+            'report': report, 'manifest': manifest}
     # Embedded scripts stay inert even when a source label contains HTML.
     encoded = json.dumps(data).replace('<', '\\u003c')
     template = (ROOT / 'visual' / 'template.html').read_text()
@@ -79,7 +93,7 @@ def _self_check():
         (bundle / 'model.bpmn').write_text('<definitions><process><task id="a" name="&lt;/script&gt;"/><task id="b" name="B"/><sequenceFlow sourceRef="a" targetRef="b"/></process></definitions>')
         (bundle / 'simulation.csv').write_text('case_id,activity,enable_time,start_time,end_time,resource\n0,B,2020-01-01T00:00:00+00:00,2020-01-01T01:00:00+00:00,2020-01-01T02:00:00+00:00,R\n')
         for name in ('report.json', 'manifest.json'):
-            (bundle / name).write_text('{}')
+            (bundle / name).write_text(json.dumps({'status': 'generated_unvalidated'}))
         try:
             result = export_view('check')
             html = Path(result['html']).read_text()

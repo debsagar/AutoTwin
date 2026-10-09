@@ -22,7 +22,8 @@ information and modeling assumptions. Explain proposed decisions clearly.
 - `discover_process` mines XES logs through PM4Py when requested.
 - `/skill:generate-environment` guides requested Stage 1 generation through
   `inspect_log_scope`, `prepare_environment`, `build_environment`,
-  `evaluate_environment`, and `export_view`. Writing tools retain
+  `evaluate_environment`, `inspect_environment`, `revise_environment`,
+  `compare_evaluations`, and `export_view`. Writing tools retain
   native tool approvals. Do not bypass a blocked approval with shell commands.
 - Explain the selected case category, returned selection scope, incomplete cases,
   calendar assumptions and missing-start policy. Missing-start estimates are
@@ -42,3 +43,7 @@ information and modeling assumptions. Explain proposed decisions clearly.
   and home-directory skills are outside the product workflow.
 - `intake.py` contains small read-only helpers; `data/` holds local example sources.
   Earlier experiment outputs are in `runs/`; do not use them automatically.
+
+- A request to complete model calibration includes investigating mismatches and
+  testing justified candidate revisions. Keep originals, compare the same
+  validation experiment, and report remaining gaps. No automatic validity claim.

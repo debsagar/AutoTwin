@@ -136,8 +136,13 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
         cases = int(observed.case_id.nunique())
     if type(cases) is not int or not 1 <= cases <= 50000:
         raise ValueError('cases must be an integer from 1 to 50000.')
+    manifest = json.loads((bundle / 'manifest.json').read_text())
+    if manifest.get('status') != 'generated_unvalidated':
+        raise ValueError('Evaluation requires a successful build; current bundle status is '
+                         f'{manifest.get("status")!r}. Rebuild before evaluating.')
     epoch = _date(starting_at) if starting_at is not None else observed.end_time.min().to_pydatetime()
-    inputs = {path.name: _digest(path) for path in (observed_path, bundle / 'model.bpmn', bundle / 'parameters.json')}
+    inputs = {path.name: _digest(path) for path in
+              (observed_path, bundle / 'train.csv', bundle / 'model.bpmn', bundle / 'parameters.json')}
     parent = bundle / 'evaluations'
     parent.mkdir(exist_ok=True)
     output = Path(tempfile.mkdtemp(prefix=f'{split}-', dir=parent))
@@ -148,6 +153,8 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
               'boundary_policy': 'Simulated system starts empty with no warm-up and runs the requested cases to completion. No observed or simulated boundary events are excluded. Observed and simulated horizons and case counts may differ; sampled observed cohorts may include cases that began before their first recorded completion.',
               'epoch_policy': 'Explicit model epoch' if starting_at is not None else 'Earliest observed completion; model epoch, not measured arrival',
               'input_sha256': inputs, 'metric_definitions': {m: METRICS[m] for m in metrics},
+              'model_provenance': {key: manifest[key] for key in
+                                   ('status', 'discovery_settings', 'build', 'revision') if key in manifest},
               'versions': {p: version(p) for p in ('log-distance-measures', 'prosimos', 'numpy', 'pandas')},
               'source': 'https://github.com/AutomatedProcessImprovement/log-distance-measures',
               'interpretation': 'Numerical diagnostics; lower distances mean closer distributions under these definitions. No automatic pass threshold. Sampled cohorts do not measure full process workload.',
@@ -169,6 +176,7 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
                 raise ValueError(f'Seed {seed} generated incomplete cases or starts.')
             report['replications'].append({'seed': seed, 'cases': int(generated.case_id.nunique()),
                                            'events': len(generated),
+                                           'simulation_sha256': _digest(run / 'simulation.csv'),
                                            'completion_range': [generated.end_time.min().isoformat(), generated.end_time.max().isoformat()], 'metrics': _distances(observed, generated, metrics),
                                            'metric_definitions': report['metric_definitions']})
             _write_json(output / 'report.json', report)
@@ -198,12 +206,27 @@ def _simulate(bundle, output, seed, cases, epoch):
 def _selfcheck():
     import pandas as pd
     from pandas.testing import assert_frame_equal
+    from unittest.mock import patch
     with tempfile.TemporaryDirectory() as folder:
         sample = Path(folder) / 'literal.csv'
         sample.write_text('case_id,activity,resource,start_time,end_time\nNA,null,NA,,2020-01-06T08:00:00Z\n')
         parsed = _read(sample)
         assert parsed.case_id.iloc[0] == 'NA' and parsed.activity.iloc[0] == 'null'
         assert parsed.resource.iloc[0] == 'NA' and parsed.start_time.isna().all()
+        bundle = Path(folder)
+        (bundle / 'validation.csv').write_text(sample.read_text())
+        _write_json(bundle / 'manifest.json', {'status': 'build_failed'})
+        # Old model files must not make a failed rebuild evaluable.
+        (bundle / 'model.bpmn').write_text('stale model')
+        (bundle / 'parameters.json').write_text('{}')
+        with patch(__name__ + '._bundle', return_value=bundle):
+            try:
+                evaluate_environment('failed', metrics=['ngram'], seeds=[1])
+            except ValueError as error:
+                assert 'successful build' in str(error)
+            else:
+                raise AssertionError('Failed builds cannot be evaluated.')
+        assert not (bundle / 'evaluations').exists()
     original = pd.DataFrame({'case_id': ['a', 'a', 'b'], 'activity': ['A', 'B', 'A'],
                              'end_time': pd.to_datetime(['2020-01-06T08:00Z', '2020-01-06T10:00Z', '2020-01-07T08:00Z'])})
     saved = original.copy(deep=True)

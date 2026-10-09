@@ -1,6 +1,6 @@
 ---
 name: generate-environment
-description: Investigate, generate and evaluate a candidate process simulation from selected XES evidence. The agent chooses scope and analysis from the user's question.
+description: Investigate, generate, diagnose and revise candidate process simulations from selected XES evidence. The agent chooses scope and experiments.
 ---
 
 # Generate and assess an environment
@@ -27,6 +27,14 @@ Do not start work merely because example data exists.
 - `evaluate_environment`: inspect the metric catalog with `metrics=None`, then
   choose metrics, seeds, partition and optional simulation size/start date.
   Each evaluation writes separate results, leaving the fitted model unchanged.
+- `inspect_environment`: inspect recorded and generated activity repetitions,
+  timing summaries and gateway probabilities. Use it to locate a discrepancy,
+  not just repeat aggregate distances.
+- `revise_environment`: create a separate candidate from the same evidence and
+  rebuild with documented settings. Supply the evidence and reason for the
+  change. The source model and its evaluations remain unchanged.
+- `compare_evaluations`: compare completed evaluation reports under matching
+  experiments; differences in inputs/seeds/metrics are reported, not ignored.
 - `export_view`: export the generated process and baseline trace as offline HTML.
 
 These are capabilities, not a mandatory sequence. Answer the requested question;
@@ -49,9 +57,9 @@ For calibration, use validation data; reserve test data for a final assessment.
 There is no universal partition ratio or distance threshold. Do not repeatedly
 use test results to choose models. Separate verification (does it execute?) from
 validation (does it represent the relevant behavior?) and improvement (changing
-operations). The current builder fixes Inductive Miner and PIX fitting methods; its arguments
-do not select alternative discovery algorithms. Current tools do not automate
-calibration or discover every mechanism.
+operations). The builder uses established discovery methods and exposes supported settings;
+inspect the tool schema for those options. You choose candidate experiments.
+There is no separate automatic optimizer and not every mechanism is supported.
 
 Completion-only logs cannot directly identify service durations or resource
 utilization. Set `estimate_missing_starts=True` only with an accepted estimation
@@ -67,8 +75,24 @@ will have the predicted effect. Missing mechanisms (batching, external waiting,
 priorities, initial backlog) may require evidence rather than numerical tuning.
 Do not inflate service durations merely to match overall cycle time.
 
-Summarize what the evidence supports, the largest mismatches and what you would
-investigate next. Never declare a valid twin from successful execution or one
+When the user asks to complete generation/calibration, a large mismatch is a
+reason to investigate, not an endpoint. Inspect the relevant recorded and
+simulated traces and model parameters. State a testable explanation, choose a
+supported revision, rebuild a separate candidate and compare it with the source
+under the same validation experiment. Test alternatives when evidence warrants
+it, within the user's budget. Prefer equal case counts for count-sensitive
+metrics (evaluation defaults to the observed count). Use identical seeds, metrics,
+epoch and validation data across candidates; never substitute test data to pick
+one. Preserve rejected candidates and explain why a change helped or failed.
+
+This is model calibration, not an operational intervention. Do not quietly change
+workforce capacity or business rules to make distances smaller. Do not invent a
+mechanism absent from the data: identify the missing evidence or unsupported
+capability if it blocks further defensible revision. Stop when the requested
+scope is complete, the experiment budget is exhausted, or no justified supported
+revision remains—not simply because tools ran. Summarize the selected candidate,
+comparative evidence and residual limits. Report regressed metrics as well as
+improvements; explain why the selected trade-off fits the question. Never declare a valid twin from one
 improved metric. Keep Stage 2 interventions separate unless requested.
 
 ## Sources
