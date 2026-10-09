@@ -15,6 +15,24 @@ Python 3.12 and uv are required. Credentials stay in local `.env`. Startup is
 idle. Native Manual mode retains approvals for writing tools. Product skills
 come only from `.deepagents/skills/`; sessions stay in `.dcode/`.
 
+### Restart and resume
+
+`uv run python main.py` starts a new conversation. To continue an interactive
+conversation, use `uv run python main.py -r` (most recent) or
+`uv run python main.py -r <thread-id>` (a specific conversation).
+Generated environments and evaluations stay in `runs/` across restarts; a new
+conversation can inspect those files but does not inherit the previous chat.
+
+In the pinned CLI version, headless mode (`-n`) does not resume threads. A
+headless-created thread can display its history in the interactive UI but cannot
+continue there if its recorded tool policy differs. Start a new interactive
+conversation and point it to the saved run instead. Do not disable approvals to
+work around a policy mismatch.
+
+The default CLI runs tools directly on this VM, not in a sandbox. Restarting
+reloads Python code; it does not undo file changes or guarantee that interrupted
+work has completed. Inspect the saved results before continuing.
+
 For example:
 
 > Investigate the BPI 2019 data for a small procurement simulation. Inspect the
