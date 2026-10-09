@@ -9,11 +9,11 @@ import environment
 
 
 def main():
-    assert environment._discovery_settings() == {'noise_threshold': 0.0, 'gateway_method': 'discovery'}
+    assert environment._discovery_settings() == {'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': False}
     assert environment._discovery_settings({'noise_threshold': .1})['noise_threshold'] == .1
     for settings in ({'noise_threshold': True}, {'noise_threshold': float('nan')},
                      {'noise_threshold': -1}, {'noise_threshold': 1.1},
-                     {'gateway_method': 'invented'}, {'unknown': 1}, []):
+                     {'gateway_method': 'invented'}, {'arrival_filter_outliers': 1}, {'unknown': 1}, []):
         try:
             environment._discovery_settings(settings)
         except ValueError:
@@ -32,10 +32,10 @@ def main():
                 (bundle / 'report.json').write_text(json.dumps({'status': 'generated_unvalidated'}))
                 return run.return_value
             run.side_effect = completed
-            environment.build_environment('fixture', True, {'noise_threshold': .1, 'gateway_method': 'equiprobable'})
+            environment.build_environment('fixture', True, {'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True})
             command = run.call_args.args[0]
             assert command[-2] == '1'
-            assert json.loads(command[-1]) == {'noise_threshold': .1, 'gateway_method': 'equiprobable'}
+            assert json.loads(command[-1]) == {'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True}
     # Actual PIX replay evidence for a branching graph, not a mocked diagnosis.
     import pandas as pd
     from pix_framework.io.bpm_graph import BPMNGraph, BPMNNodeType, ElementInfo

@@ -238,14 +238,16 @@ def _discovery_settings(settings=None):
     """Validate only discovery options supported by the installed libraries."""
     if settings is None:
         settings = {}
-    if not isinstance(settings, dict) or set(settings) - {'noise_threshold', 'gateway_method'}:
-        raise ValueError('settings accepts noise_threshold and gateway_method only.')
-    result = {'noise_threshold': 0.0, 'gateway_method': 'discovery', **settings}
+    if not isinstance(settings, dict) or set(settings) - {'noise_threshold', 'gateway_method', 'arrival_filter_outliers'}:
+        raise ValueError('settings accepts noise_threshold, gateway_method, and arrival_filter_outliers only.')
+    result = {'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': False, **settings}
     noise = result['noise_threshold']
     if type(noise) not in (int, float) or not math.isfinite(noise) or not 0 <= noise <= 1:
         raise ValueError('noise_threshold must be a finite number from 0 to 1.')
     if result['gateway_method'] not in ('discovery', 'equiprobable'):
         raise ValueError('gateway_method must be discovery or equiprobable.')
+    if type(result['arrival_filter_outliers']) is not bool:
+        raise ValueError('arrival_filter_outliers must be boolean.')
     result['noise_threshold'] = float(noise)
     return result
 
@@ -354,7 +356,7 @@ def _build(name, estimate, settings=None):
     manifest['gateway_replay']['training_cases'] = int(train.case_id.nunique())
     manifest['gateway_replay']['training_events'] = len(train)
     manifest['gateway_replay']['replayed_events'] = len(model_train)
-    parameters = {**resource, **discover_case_arrival_model(train, ids, filter_outliers=False).to_dict(),
+    parameters = {**resource, **discover_case_arrival_model(train, ids, filter_outliers=settings['arrival_filter_outliers']).to_dict(),
                   'gateway_branching_probabilities': [g.to_dict() for g in compute_gateway_probabilities(
                       model_train, ids, graph, GatewayProbabilitiesDiscoveryMethod(settings['gateway_method']))]}
     _write_json(bundle / 'parameters.json', parameters)
