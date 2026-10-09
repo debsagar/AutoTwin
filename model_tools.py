@@ -186,7 +186,7 @@ def compare_evaluations(paths: list[str]) -> dict:
                    for r in reports[1:]]
     return {'comparable': not any(differences), 'protocol_differences': differences,
             'protocol': baseline, 'evaluations': [
-        {'path': p, 'name': r['name'], 'summary': r['summary'],
+        {'path': p, 'name': r['name'], 'summary': r['summary'], 'conformance': r.get('conformance'),
          'input_sha256': r['input_sha256'], 'model_provenance': r.get('model_provenance'),
          'replications': [{k: v for k, v in run.items() if k != 'metric_definitions'}
                           for run in r['replications']]} for p, r in zip(paths, reports)]}

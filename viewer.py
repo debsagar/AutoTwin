@@ -67,7 +67,7 @@ def export_view(name: str) -> dict:
                 (bundle / name).is_file() and hashlib.sha256((bundle / name).read_bytes()).hexdigest() == digest
                 for name, digest in inputs.items()):
             report['evaluations'].append({k: evaluation[k] for k in
-                ('split', 'cases', 'seeds', 'starting_at', 'summary', 'interpretation')})
+                ('split', 'cases', 'seeds', 'starting_at', 'summary', 'interpretation', 'conformance') if k in evaluation})
     data = {'name': name, 'nodes': nodes, 'edges': edges, 'records': records,
             'report': report, 'manifest': manifest}
     # Embedded scripts stay inert even when a source label contains HTML.

@@ -50,11 +50,12 @@ def main():
                   'observed_cases': 2, 'observed_events': 3, 'seeds': [42], 'starting_at': '2020-01-01',
                   'metric_definitions': {'ngram': {'definition': 'trigrams'}}, 'boundary_policy': 'empty',
                   'epoch_policy': 'explicit', 'versions': {}, 'input_sha256': {'train.csv': 'same'},
-                  'summary': {}, 'replications': []}
+                  'summary': {}, 'replications': [], 'conformance': {'precision': 0.8}}
         paths = [root / 'left.json', root / 'right.json']
         for path in paths:
             path.write_text(json.dumps(report))
-        assert len(tools.compare_evaluations([str(p) for p in paths])['evaluations']) == 2
+        compared = tools.compare_evaluations([str(p) for p in paths])['evaluations']
+        assert len(compared) == 2 and compared[0]['conformance']['precision'] == 0.8
         directory = root / 'evaluation'
         directory.mkdir()
         (directory / 'report.json').write_text(json.dumps(report))
