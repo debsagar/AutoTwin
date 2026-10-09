@@ -36,7 +36,8 @@ def _date(value):
 
 
 def _source(path):
-    source = Path(path).resolve()
+    source = Path(path)
+    source = (ROOT / source).resolve() if not source.is_absolute() else source.resolve()
     if not source.is_relative_to((ROOT / 'data').resolve()) or source.suffix.lower() != '.xes':
         raise ValueError('Select an .xes file inside data/.')
     return source

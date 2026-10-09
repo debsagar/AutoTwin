@@ -1,5 +1,6 @@
 """Run with Python; exercise temporal selection without fitting dependencies."""
 import csv
+from contextlib import chdir
 import tempfile
 from pathlib import Path
 import environment as env
@@ -21,7 +22,15 @@ def main():
                           + trace('start-cross', ['2019-01-02T00:00:00Z'], start='2018-12-31T00:00:00Z') + '</log>')
         partitions = {'train': {'start': '2019-01-01', 'end': '2019-02-01'},
                       'validation': {'start': '2019-02-01T00:00:00Z', 'end': '2019-03-01T00:00:00Z'}}
-        scope = env.inspect_log_scope(str(source), case_value='A')
+        with tempfile.TemporaryDirectory() as unrelated, chdir(unrelated):
+            scope = env.inspect_log_scope('data/scope.xes', case_value='A')
+            assert env._source('data/scope.xes') == source
+            try:
+                env._source('../outside.xes')
+            except ValueError:
+                pass
+            else:
+                raise AssertionError('Accepted path outside data')
         assert scope['source_cases'] == 5 and scope['other_category_events_excluded'] == 1
         assert scope['monthly_first_observations'] == {'2018-12': 1, '2019-01': 2, '2019-02': 1}
         manifest = env.prepare_environment(str(source), 'ok', partitions, case_value='A')

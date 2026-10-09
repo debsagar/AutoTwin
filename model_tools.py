@@ -7,6 +7,8 @@ from pathlib import Path
 from statistics import median
 from xml.etree import ElementTree as ET
 
+import environment
+
 from environment import _bundle, _date, _source_digest, _write_json, build_environment
 
 
@@ -95,7 +97,7 @@ def _model(bundle):
 
 
 def _evaluation_report(bundle, evaluation):
-    path = Path(evaluation).resolve()
+    path = (environment.ROOT / evaluation).resolve()
     if path.is_dir():
         path /= 'report.json'
     if not path.is_relative_to((bundle / 'evaluations').resolve()) or path.name != 'report.json':
@@ -171,7 +173,8 @@ def compare_evaluations(paths: list[str]) -> dict:
     """Compare report files or evaluation directories without choosing a winner."""
     if not isinstance(paths, list) or len(paths) < 2:
         raise ValueError('Supply at least two evaluation report paths.')
-    paths = [str(Path(p) / 'report.json') if Path(p).is_dir() else str(Path(p)) for p in paths]
+    paths = [environment.ROOT / p for p in paths]
+    paths = [str(p / 'report.json') if p.is_dir() else str(p) for p in paths]
     reports = [json.loads(Path(p).read_text()) for p in paths]
     def protocol(report):
         return {k: report[k] for k in ('split', 'cases', 'observed_cases', 'observed_events',

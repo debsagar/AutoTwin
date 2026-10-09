@@ -14,10 +14,9 @@ def discover_process(path: str, max_cases: int = 5000) -> dict:
     from pm4py.objects.log.importer.xes import importer
     from pm4py.objects.log.obj import EventLog, Trace
 
-    root = Path(__file__).resolve().parent / "data"
-    source = Path(path).resolve()
-    if not source.is_relative_to(root.resolve()) or source.suffix.lower() != ".xes":
-        raise ValueError("Select an .xes file inside AutoTwin's data directory.")
+    from environment import ROOT, _source
+    root = ROOT / "data"
+    source = _source(path)
     if isinstance(max_cases, bool) or not 1 <= max_cases <= 50000:
         raise ValueError("max_cases must be between 1 and 50000.")
     # ponytail: bounded prefix keeps interactive calls small; full-log jobs come later.

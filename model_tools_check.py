@@ -1,4 +1,5 @@
 """Small check: evidence aggregation, candidate isolation, protocol compatibility."""
+from contextlib import chdir
 import asyncio
 import json
 from subprocess import TimeoutExpired
@@ -60,6 +61,13 @@ def main():
         directory.mkdir()
         (directory / 'report.json').write_text(json.dumps(report))
         assert tools.compare_evaluations([str(paths[0]), str(directory)])['comparable']
+        with patch.object(environment, 'ROOT', root), tempfile.TemporaryDirectory() as unrelated, chdir(unrelated):
+            assert tools.compare_evaluations(['left.json', 'evaluation'])['comparable']
+            nested = root / 'runs/environments/original/evaluations/check'
+            nested.mkdir(parents=True)
+            (nested / 'report.json').write_text(json.dumps(report))
+            path, _ = tools._evaluation_report(root / 'runs/environments/original', 'runs/environments/original/evaluations/check')
+            assert path == nested / 'report.json'
         report['seeds'] = [43]
         paths[1].write_text(json.dumps(report))
         comparison = tools.compare_evaluations([str(p) for p in paths])
