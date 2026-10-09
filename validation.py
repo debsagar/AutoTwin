@@ -36,6 +36,9 @@ METRICS = {
     'circadian_completion': {'units': 'hours of day',
                              'definition': 'Mean of seven weekday Wasserstein distances of completion hour in UTC.',
                              'caveats': 'UTC, not local working time. Official metric assigns 23 hours when only one log has events on a weekday; absent in both counts zero. Not a circular-hour distance.'},
+    'absolute_completion': {'units': 'hours (1-hour bins)',
+                            'definition': 'Wasserstein distance of absolute event completion timestamps, preserving the simulation epoch.',
+                            'caveats': 'Events weighted equally; sensitive to arrival timing and elapsed time together. Requires comparable calendar periods.'},
     'cycle_time': {'units': 'hours (1-hour bins)',
                    'definition': 'Wasserstein distance of last completion minus first measured start per case.',
                    'caveats': 'Requires every observed start; start-to-end elapsed time includes waiting and off-hours.'},
@@ -73,6 +76,7 @@ def _distances(observed, generated, metrics):
     from log_distance_measures.case_arrival_distribution import case_arrival_distribution_distance
     from log_distance_measures.relative_event_distribution import relative_event_distribution_distance
     from log_distance_measures.circadian_event_distribution import circadian_event_distribution_distance
+    from log_distance_measures.absolute_event_distribution import absolute_event_distribution_distance
     completion_ids = EventLogIDs(case='case_id', activity='activity', start_time='end_time', end_time='end_time')
     measured_ids = EventLogIDs(case='case_id', activity='activity', start_time='start_time', end_time='end_time')
     result = {}
@@ -90,6 +94,8 @@ def _distances(observed, generated, metrics):
             origin = observed[ids.start_time].min()
             right[ids.start_time] += origin - generated[ids.start_time].min()
             distance = case_arrival_distribution_distance(left, ids, right, ids)
+        elif metric == 'absolute_completion':
+            distance = absolute_event_distribution_distance(*args, discretize_type=AbsoluteTimestampType.END)
         elif metric == 'relative_completion':
             distance = relative_event_distribution_distance(*args, discretize_type=AbsoluteTimestampType.END)
         else:
@@ -98,6 +104,19 @@ def _distances(observed, generated, metrics):
             raise ValueError(f'{metric} returned a non-finite distance.')
         result[metric] = float(distance)
     return result
+
+
+def _conformance(observed, model_path):
+    """Structural conformance of the unfiltered observed split, not fitted timing."""
+    import pm4py
+    net, initial, final = pm4py.convert_to_petri_net(pm4py.read_bpmn(str(model_path)))
+    keys = dict(activity_key='activity', timestamp_key='end_time', case_id_key='case_id')
+    return {
+        'method': 'PM4Py alignment-based fitness and precision',
+        'fitness': pm4py.fitness_alignments(observed, net, initial, final, **keys),
+        'precision': pm4py.precision_alignments(observed, net, initial, final, **keys),
+        'interpretation': 'Higher is better. Fitness measures replay of recorded behavior; precision penalizes extra enabled behavior. Neither validates durations or intervention effects. Completion order is used, including its ambiguous timestamp ties.',
+    }
 
 
 def _digest(path):
@@ -155,12 +174,20 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
               'input_sha256': inputs, 'metric_definitions': {m: METRICS[m] for m in metrics},
               'model_provenance': {key: manifest[key] for key in
                                    ('status', 'discovery_settings', 'build', 'revision') if key in manifest},
-              'versions': {p: version(p) for p in ('log-distance-measures', 'prosimos', 'numpy', 'pandas')},
+              'versions': {p: version(p) for p in ('log-distance-measures', 'prosimos', 'pm4py', 'numpy', 'pandas')},
               'source': 'https://github.com/AutomatedProcessImprovement/log-distance-measures',
               'interpretation': 'Numerical diagnostics; lower distances mean closer distributions under these definitions. No automatic pass threshold. Sampled cohorts do not measure full process workload.',
               'replications': []}
     _write_json(output / 'report.json', report)
     try:
+        process = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--conformance',
+                                  str(observed_path.resolve()), str((bundle / 'model.bpmn').resolve()),
+                                  str((output / 'conformance.json').resolve())],
+                                 capture_output=True, text=True, timeout=120)
+        (output / 'conformance.log').write_text(process.stdout + process.stderr)
+        if process.returncode:
+            raise RuntimeError(f'Conformance failed; see {output / "conformance.log"}.')
+        report['conformance'] = json.loads((output / 'conformance.json').read_text())
         for seed in seeds:
             run = output / f'seed-{seed}'
             run.mkdir()
@@ -235,6 +262,17 @@ def _selfcheck():
     shifted = original.copy()
     shifted.end_time += timedelta(days=700)
     assert all(value == 0 for value in _distances(original, shifted, completion).values())
+    assert _distances(original, shifted, ['absolute_completion'])['absolute_completion'] > 0
+    with tempfile.TemporaryDirectory() as folder:
+        import pm4py
+        model = pm4py.discover_bpmn_inductive(original, activity_key='activity', timestamp_key='end_time', case_id_key='case_id')
+        path = Path(folder) / 'model.bpmn'
+        pm4py.write_bpmn(model, str(path), auto_layout=False)
+        fit = _conformance(original, path)
+        assert fit['fitness']['log_fitness'] > 0.999 and 0 <= fit['precision'] <= 1
+        unseen = original.copy()
+        unseen.loc[1, 'activity'] = 'UNSEEN'
+        assert _conformance(unseen, path)['fitness']['log_fitness'] < 1
     changed = original.copy()
     changed.loc[1, 'activity'] = 'C'
     assert _distances(original, changed, ['ngram'])['ngram'] > 0
@@ -245,6 +283,8 @@ def _selfcheck():
 if __name__ == '__main__':
     if sys.argv[1:] == ['--selfcheck']:
         _selfcheck()
+    elif len(sys.argv) == 5 and sys.argv[1] == '--conformance':
+        _write_json(Path(sys.argv[4]), _conformance(_read(Path(sys.argv[2])), Path(sys.argv[3])))
     elif len(sys.argv) == 7 and sys.argv[1] == '--simulate':
         _simulate(Path(sys.argv[2]), Path(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
     else:
