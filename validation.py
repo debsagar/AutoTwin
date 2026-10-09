@@ -119,6 +119,28 @@ def _conformance(observed, model_path):
     }
 
 
+def _run_conformance(observed_path, model_path, output):
+    """A bounded diagnostic must not discard otherwise executable fidelity metrics."""
+    log = output / 'conformance.log'
+    try:
+        process = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--conformance',
+                                  str(observed_path.resolve()), str(model_path.resolve()),
+                                  str((output / 'conformance.json').resolve())],
+                                 capture_output=True, text=True, timeout=120)
+        log.write_text(process.stdout + process.stderr)
+        if process.returncode:
+            raise RuntimeError(f'Conformance subprocess exited {process.returncode}.')
+        return {'status': 'evaluated', **json.loads((output / 'conformance.json').read_text())}
+    except subprocess.TimeoutExpired as error:
+        # TimeoutExpired can carry bytes even with text=True.
+        log.write_bytes(b''.join(part.encode() if isinstance(part, str) else part or b''
+                                for part in (error.stdout, error.stderr)))
+        reason = 'Alignment conformance exceeded the 120-second limit.'
+    except (OSError, ValueError, RuntimeError) as error:
+        reason = str(error)
+    return {'status': 'unavailable', 'reason': reason, 'log': str(log)}
+
+
 def _digest(path):
     with path.open('rb') as handle:
         return hashlib.file_digest(handle, 'sha256').hexdigest()
@@ -180,14 +202,8 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
               'replications': []}
     _write_json(output / 'report.json', report)
     try:
-        process = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--conformance',
-                                  str(observed_path.resolve()), str((bundle / 'model.bpmn').resolve()),
-                                  str((output / 'conformance.json').resolve())],
-                                 capture_output=True, text=True, timeout=120)
-        (output / 'conformance.log').write_text(process.stdout + process.stderr)
-        if process.returncode:
-            raise RuntimeError(f'Conformance failed; see {output / "conformance.log"}.')
-        report['conformance'] = json.loads((output / 'conformance.json').read_text())
+        report['conformance'] = _run_conformance(observed_path, bundle / 'model.bpmn', output)
+        _write_json(output / 'report.json', report)
         for seed in seeds:
             run = output / f'seed-{seed}'
             run.mkdir()
@@ -240,6 +256,10 @@ def _selfcheck():
         parsed = _read(sample)
         assert parsed.case_id.iloc[0] == 'NA' and parsed.activity.iloc[0] == 'null'
         assert parsed.resource.iloc[0] == 'NA' and parsed.start_time.isna().all()
+        with patch(__name__ + '.subprocess.run', side_effect=subprocess.TimeoutExpired('alignment', 120, output=b'partial alignment')):
+            diagnostic = _run_conformance(sample, sample, Path(folder))
+            assert diagnostic['status'] == 'unavailable' and '120-second' in diagnostic['reason']
+            assert (Path(folder) / 'conformance.log').read_text() == 'partial alignment'
         bundle = Path(folder)
         (bundle / 'validation.csv').write_text(sample.read_text())
         _write_json(bundle / 'manifest.json', {'status': 'build_failed'})
