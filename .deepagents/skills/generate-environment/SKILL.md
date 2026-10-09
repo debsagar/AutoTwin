@@ -27,6 +27,7 @@ Do not require the user to know process-mining terminology or name each tool.
    missing-start estimation if required, unless the user prohibited it. State
    inferred calendars and missing-resource capacity as assumptions. Preserve
    baseline artifacts. Check execution and omitted behavior before calibration.
+   Reject loop-capped, incomplete or otherwise invalid executions before scoring.
 3. **Assess.** Read the `evaluate_environment` metric catalog. Select available
    published measures covering control flow and temporal behavior, rather than
    inventing a composite score. For completion-only logs, label completion spans
@@ -44,6 +45,9 @@ Do not require the user to know process-mining terminology or name each tool.
    evaluating it on test with the chosen metrics and several seeds. Do not tune
    on test outcomes. If the final result is poor, say so; do not relabel validation
    as test or keep searching against the held-out results.
+   Selection may conclude that no candidate is acceptable. Distinguish the best
+   diagnostic model from one that adequately represents the selected operation;
+   never select an invalid execution merely to finish the workflow.
 6. **Deliver.** Call `export_view` for the selected model. Write one concise report
    in its environment directory linking the BPMN, parameters, manifest, evaluation
    reports and HTML. Include scope, assumptions, baseline versus selected
