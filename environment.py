@@ -388,6 +388,17 @@ def _gateway_replay_diagnosis(train, ids, graph):
             'caveat': 'PIX heuristic replay frequencies can omit invisible terminal paths. All observed tasks fired is not a complete alignment or proof that branch probabilities reproduce the training log.'}
 
 
+def _termination_evidence(folder):
+    """Prosimos writes capped cases as ordinary rows; inspect its explicit warnings."""
+    path = folder / 'simulation_warnings.txt'
+    warnings = path.read_text() if path.exists() else ''
+    cases = sorted(set(re.findall(r'Infinite loop was detected in case #(\S+) on element', warnings)))
+    return {'warning_file_present': path.exists(), 'terminated_case_count': len(cases),
+            'terminated_case_ids': cases,
+            'completion_verified': False,
+            'interpretation': 'Counts describe logged cases, not verified process completion. No termination warning alone does not prove every case reached an end event.'}
+
+
 def _report(bundle, manifest, simulated, estimated):
     import pandas as pd
     from importlib.metadata import version
@@ -402,11 +413,14 @@ def _report(bundle, manifest, simulated, estimated):
     generated = summary(simulated, 'case_id', 'activity', 'end_time', 'end_time')
     generated['median_full_span_hours'] = summary(simulated, 'case_id', 'activity', 'start_time', 'end_time')['median_case_span_hours']
     valid = generated['cases'] == 200 and len(simulated) > 0 and (pd.to_datetime(simulated.start_time, utc=True) <= pd.to_datetime(simulated.end_time, utc=True)).all()
+    termination = _termination_evidence(bundle)
+    valid = valid and not termination['terminated_case_count']
     fitted = pd.read_csv(bundle / 'train_fitted.csv', keep_default_na=False)
     missing = fitted[fitted.resource == 'NOT_SET']
     estimated_duration = (pd.to_datetime(missing.end_time, utc=True, format='mixed') - pd.to_datetime(missing.start_time, utc=True, format='mixed')).dt.total_seconds() / 3600
     report = {'status': 'generated_unvalidated' if valid else 'simulation_check_failed', 'name': manifest['name'], 'bundle': str(bundle),
-              'simulation': {'engine': 'Prosimos', 'seed': SEED, 'requested_cases': 200, 'valid_trace': bool(valid)},
+              'simulation': {'engine': 'Prosimos', 'seed': SEED, 'requested_cases': 200, 'valid_trace': bool(valid),
+                             'termination': termination},
               'discovery_settings': manifest['discovery_settings'],
               'gateway_replay': manifest['gateway_replay'],
               'generated': generated,

@@ -17,7 +17,7 @@ from importlib.metadata import version
 from pathlib import Path
 from statistics import mean, pstdev
 
-from environment import _bundle, _date, _write_json
+from environment import _bundle, _date, _write_json, _termination_evidence
 
 # Each entry specifies a quantity, rather than choosing a metric policy.
 METRICS = {
@@ -191,7 +191,7 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
               'cases': cases, 'observed_cases': int(observed.case_id.nunique()), 'observed_events': len(observed),
               'seeds': seeds, 'starting_at': epoch.isoformat(),
               'observed_completion_range': [observed.end_time.min().isoformat(), observed.end_time.max().isoformat()],
-              'boundary_policy': 'Simulated system starts empty with no warm-up and runs the requested cases to completion. No observed or simulated boundary events are excluded. Observed and simulated horizons and case counts may differ; sampled observed cohorts may include cases that began before their first recorded completion.',
+              'boundary_policy': 'Simulated system starts empty with no warm-up and schedules the requested cases until its event queue empties; end-event completion is not independently verified. Explicit loop-limit terminations are rejected. No observed or simulated boundary events are excluded. Observed and simulated horizons and case counts may differ; sampled observed cohorts may include cases that began before their first recorded completion.',
               'epoch_policy': 'Explicit model epoch' if starting_at is not None else 'Earliest observed completion; model epoch, not measured arrival',
               'input_sha256': inputs, 'metric_definitions': {m: METRICS[m] for m in metrics},
               'model_provenance': {key: manifest[key] for key in
@@ -214,10 +214,14 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
             (run / 'simulation.log').write_text(process.stdout + process.stderr)
             if process.returncode:
                 raise RuntimeError(f'Seed {seed} failed; see {run / "simulation.log"}.')
+            termination = _termination_evidence(run)
+            if termination['terminated_case_count']:
+                report['failed_replication'] = {'seed': seed, 'termination': termination}
+                raise ValueError(f'Seed {seed} has {termination["terminated_case_count"]} cases terminated by the simulator loop limit; distances are not scored.')
             generated = _read(run / 'simulation.csv')
             if generated.case_id.nunique() != cases or 'start_time' not in generated or generated.start_time.isna().any():
                 raise ValueError(f'Seed {seed} generated incomplete cases or starts.')
-            report['replications'].append({'seed': seed, 'cases': int(generated.case_id.nunique()),
+            report['replications'].append({'seed': seed, 'termination': termination, 'cases': int(generated.case_id.nunique()),
                                            'events': len(generated),
                                            'simulation_sha256': _digest(run / 'simulation.csv'),
                                            'completion_range': [generated.end_time.min().isoformat(), generated.end_time.max().isoformat()], 'metrics': _distances(observed, generated, metrics),
