@@ -20,8 +20,13 @@ come only from `.deepagents/skills/`; sessions stay in `.dcode/`.
 `uv run python main.py` starts a new conversation. To continue an interactive
 conversation, use `uv run python main.py -r` (most recent) or
 `uv run python main.py -r <thread-id>` (a specific conversation).
-Generated environments and evaluations stay in `runs/` across restarts; a new
-conversation can inspect those files but does not inherit the previous chat.
+Each conversation writes to `runs/workspaces/<thread-id>/`. A new conversation
+(including `/new`) gets a fresh workspace; resuming the same thread reuses it.
+The directory is created on the first model/tool request, not while the UI is
+idle. Raw `data/`, product code and skills stay shared; nothing is copied.
+Old runs remain where they are and can be read explicitly. New conversations
+do not inherit the previous chat or candidate names. Workspaces accumulate
+until you remove them; restarting does not reset their files.
 
 In the pinned CLI version, headless mode (`-n`) does not resume threads. A
 headless-created thread can display its history in the interactive UI but cannot
@@ -116,7 +121,8 @@ Important limits:
 
 ## Files and prior example
 
-Models live in `runs/environments/<name>/`: manifest, named partition CSVs,
+Start with `runs/workspaces/<thread-id>/report.md`, the final Stage 1 report.
+Models live in that workspace’s `environments/<name>/`: manifest, named partition CSVs,
 `train_fitted.csv`, BPMN, parameter JSON, baseline simulation, build report,
 evaluations and optional HTML. Existing prepared names are not overwritten.
 Rebuilding updates model/baseline; export the HTML again afterward.
@@ -133,11 +139,19 @@ geometry. It replays simulator output; it does not run Python in the browser.
 and approval compatibility overrides. `environment.py` prepares and builds;
 `validation.py` runs comparisons; `model_tools.py` inspects and revises models;
 `viewer.py` and `visual/` export the replay with matching evaluation summaries.
-Versions are pinned. No custom chat store or orchestration framework.
+Versions are pinned. `workspace.py` uses the native thread ID and supported
+[extension middleware](https://docs.langchain.com/oss/deepagents/code/extensions)
+to scope product tools and native file paths. Conversation
+[persistence](https://docs.langchain.com/oss/python/langgraph/persistence) stays
+with dcode; no custom chat store or orchestration framework. Native shell
+commands start in the workspace but can access absolute paths: this is output
+organization, not an OS sandbox. Standalone developer scripts retain the legacy
+`runs/environments/` default.
 
 Focused developer checks:
 
 ```sh
+uv run python workspace_check.py
 uv run python temporal_selection_check.py
 uv run python validation.py --selfcheck
 uv run python calibration_build_check.py

@@ -61,7 +61,10 @@ def middleware():
             instruction = (f'\nAutoTwin conversation workspace: {workspace}. All generated files, '
                            f'reports, scratch files and environments belong here. Native execute starts here. '
                            f'Shared raw inputs are read-only at {ROOT / "data"}; use absolute paths to read them. '
-                           f'Product code and skills remain at {ROOT}. Do not modify shared inputs, product '
+                           f'Product code and skills remain at {ROOT}; read skills by absolute path. '
+                           'At the start of a task identify this workspace to the user; use absolute artifact '
+                           'paths in tool calls. The final Stage 1 entrypoint is workspace/report.md; '
+                           'candidates belong under workspace/environments/<name>/. Do not modify shared inputs, product '
                            'code, or other conversations. This is output organization, not an OS sandbox.')
             blocks = list(request.system_message.content_blocks) if request.system_message else []
             return request.override(system_message=SystemMessage(content=[*blocks, {'type': 'text', 'text': instruction}]))

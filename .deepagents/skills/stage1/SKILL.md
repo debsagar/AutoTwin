@@ -10,6 +10,13 @@ complete Stage 1 task. If absent, use the clearly selected dataset in this
 conversation; ask for the dataset only if none is identifiable. Do not assume a
 particular dataset or silently discard the user's budget or constraints.
 
+Use the conversation workspace supplied in the runtime instructions. State its
+path when starting. Write the final evidence report to `<workspace>/report.md`;
+keep candidates under `<workspace>/environments/<name>/` and link their artifacts
+from that report. Use absolute paths for generated files and shared raw data.
+Existing runs are retained; do not automatically copy or move them into this
+conversation. Raw data, product code and skills stay shared.
+
 Read and follow `.deepagents/skills/discover-operation/SKILL.md`, then
 `.deepagents/skills/generate-environment/SKILL.md`. You, the agent, own the
 investigation: discover, prepare, build, evaluate, revise within budget, select
