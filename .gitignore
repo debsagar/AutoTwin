@@ -11,9 +11,6 @@ output/
 
 .playwright-cli/
 artifacts/
-data/
-output/
-runs/
 AGENTS.md
 CLAUDE.md
 

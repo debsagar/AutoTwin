@@ -101,7 +101,7 @@ def prepare_environment(path: str, name: str, partitions: dict,
      "validation": {"start": "2018-05-01", "end": "2018-09-01"}}.
     The caller chooses windows and cohort. Cases must fit wholly inside a window;
     exclusions are counted. max_cases rejects oversized selections, never samples.
-    Writes evidence only. Missing starts need an accepted estimation policy to build.
+    Writes evidence only. For missing starts, explicitly choose and disclose estimation at build.
     """
     from environment import prepare_environment as prepare
     return prepare(path, name, partitions, max_cases, case_attribute, case_value)
@@ -110,10 +110,13 @@ def prepare_environment(path: str, name: str, partitions: dict,
 def build_environment(name: str, estimate_missing_starts: bool = False,
                       settings: dict | None = None) -> dict:
     """Build the executable Stage 1 environment from prepared evidence. Writes
-    generated artifacts. Missing starts require an explicitly accepted estimation
-    policy; estimated service durations are assumptions, not observed evidence.
+    generated artifacts. For missing starts, estimate_missing_starts=True records
+    the chosen modeling assumption; estimated durations are not observed evidence.
     Supported settings: noise_threshold (0..1, default 0), gateway_method
-    ("discovery" or "equiprobable", default "discovery"). Equally likely routes
+    ("discovery" or "equiprobable", default "discovery"), arrival_filter_outliers
+    (bool, default False; PIX built-in interarrival outlier filtering). Filtering
+    can collapse a batch-heavy log to zero interarrival time; inspect the fitted
+    distribution before accepting it. Equally likely routes
     are an explicit alternative assumption, not learned probabilities. Increasing
     noise_threshold prunes infrequent behavior; inspect omitted activities before
     treating a smaller distance as a defensible improvement.
@@ -150,7 +153,8 @@ def revise_environment(source: str, name: str, reason: str, settings: dict) -> d
     """Build a separate candidate from the same input partitions. Supply an
     evidence-based reason and supported discovery settings. Source artifacts are
     preserved; evaluate the candidate with the same validation experiment. Settings
-    are noise_threshold (0..1) and gateway_method (discovery or equiprobable).
+    are noise_threshold (0..1), gateway_method (discovery or equiprobable),
+    and arrival_filter_outliers (bool; PIX built-in filtering).
     Omitted settings inherit the source settings.
     """
     from model_tools import revise_environment as revise
