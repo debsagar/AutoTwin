@@ -1,0 +1,5 @@
+Three.js 0.160.1 (MIT), retrieved 2026-10-08.
+https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js
+https://cdn.jsdelivr.net/npm/three@0.160.1/LICENSE
+Upstream: https://github.com/mrdoob/three.js/tree/r160
+The pinned library is embedded in exported HTML; no runtime CDN access.

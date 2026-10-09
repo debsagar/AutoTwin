@@ -1,0 +1,10 @@
+[project]
+name = "autotwin"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "deepagents-code[openrouter]==0.1.83",
+    "pix-framework==0.15.0",
+    "pm4py==2.7.23.8",
+    "prosimos==2.1.0",
+]
