@@ -245,8 +245,8 @@ def _discovery_settings(settings=None):
     noise = result['noise_threshold']
     if type(noise) not in (int, float) or not math.isfinite(noise) or not 0 <= noise <= 1:
         raise ValueError('noise_threshold must be a finite number from 0 to 1.')
-    if result['gateway_method'] not in ('discovery', 'equiprobable'):
-        raise ValueError('gateway_method must be discovery or equiprobable.')
+    if result['gateway_method'] not in ('discovery', 'equiprobable', 'token_replay'):
+        raise ValueError('gateway_method must be discovery, equiprobable, or token_replay.')
     if type(result['arrival_filter_outliers']) is not bool:
         raise ValueError('arrival_filter_outliers must be boolean.')
     result['noise_threshold'] = float(noise)
@@ -352,14 +352,18 @@ def _build(name, estimate, settings=None):
                 r['cost_per_hour'] = 0
     model_train = train[train.activity.isin(task_ids)]
     manifest['discovery_settings'] = settings
-    manifest['gateway_replay'] = _gateway_replay_diagnosis(model_train, ids, graph)
+    if settings['gateway_method'] == 'token_replay':
+        gateways, manifest['gateway_replay'] = _token_gateway_probabilities(model_train, pm4py.read_bpmn(str(bundle / 'model.bpmn')))
+    else:
+        manifest['gateway_replay'] = _gateway_replay_diagnosis(model_train, ids, graph)
+        gateways = [g.to_dict() for g in compute_gateway_probabilities(
+            model_train, ids, graph, GatewayProbabilitiesDiscoveryMethod(settings['gateway_method']))]
     manifest['gateway_replay']['activities_omitted_by_discovery'] = train[~train.activity.isin(task_ids)].activity.value_counts().to_dict()
     manifest['gateway_replay']['training_cases'] = int(train.case_id.nunique())
     manifest['gateway_replay']['training_events'] = len(train)
     manifest['gateway_replay']['replayed_events'] = len(model_train)
     parameters = {**resource, **discover_case_arrival_model(train, ids, filter_outliers=settings['arrival_filter_outliers']).to_dict(),
-                  'gateway_branching_probabilities': [g.to_dict() for g in compute_gateway_probabilities(
-                      model_train, ids, graph, GatewayProbabilitiesDiscoveryMethod(settings['gateway_method']))]}
+                  'gateway_branching_probabilities': gateways}
     _write_json(bundle / 'parameters.json', parameters)
     random.seed(SEED)
     np.random.seed(SEED)
@@ -368,6 +372,50 @@ def _build(name, estimate, settings=None):
                    starting_at=train.start_time.min().isoformat())
     simulated = pd.read_csv(bundle / 'simulation.csv', keep_default_na=False)
     _report(bundle, manifest, simulated, estimate)
+
+
+def _token_gateway_probabilities(train, bpmn):
+    """Count complete, fitting training replays, including silent loop exits."""
+    import pm4py
+    from pm4py.objects.conversion.bpmn.variants import to_petri_net
+    from pm4py.objects.petri_net.utils import reduction
+    if any(isinstance(n, pm4py.objects.bpmn.obj.BPMN.InclusiveGateway) for n in bpmn.get_nodes()):
+        raise ValueError('Gateway token replay supports exclusive and parallel gateways only.')
+    net, initial, final, flow_places, _ = to_petri_net.apply(
+        bpmn, parameters={'return_flow_trans_map': True})
+    branches = {flow: place for flow, place in flow_places.items()
+                if isinstance(flow.get_source(), pm4py.objects.bpmn.obj.BPMN.ExclusiveGateway)
+                and len(flow.get_source().get_out_arcs()) > 1}
+    transitions = {next(iter(place.in_arcs)).source: flow for flow, place in branches.items()}
+    # Preserve branch identities while PM4Py removes long invisible chains.
+    # Restore invisibility before replay: these are never fabricated log events.
+    for transition in transitions:
+        transition.label = transition.name
+    reduction.apply_simple_reduction(net)
+    for transition in transitions:
+        transition.label = None
+    if not transitions.keys() <= net.transitions:
+        raise ValueError('Petri reduction removed a gateway branch transition.')
+    replay = pm4py.conformance_diagnostics_token_based_replay(
+        train, net, initial, final, activity_key='activity', timestamp_key='end_time', case_id_key='case_id')
+    fitted = sum(r['trace_is_fit'] and r['missing_tokens'] == 0 and r['remaining_tokens'] == 0 for r in replay)
+    if fitted != len(replay):
+        raise ValueError(f'Gateway token replay fits {fitted}/{len(replay)} training cases; refusing incomplete branch counts.')
+    counts = Counter(str(transitions[t].get_id()) for r in replay for t in r['activated_transitions'] if t in transitions)
+    frequencies = {}
+    for flow in branches:
+        frequencies.setdefault(str(flow.get_source().get_id()), {})[str(flow.get_id())] = counts[str(flow.get_id())]
+    probabilities = []
+    for gateway, paths in frequencies.items():
+        total = sum(paths.values())
+        if not total:
+            raise ValueError(f'Gateway {gateway} has no fitting training observations.')
+        probabilities.append({'gateway_id': gateway, 'probabilities': [
+            {'path_id': path, 'value': count / total} for path, count in paths.items()]})
+    return probabilities, {'method': 'PM4Py token replay on reduced Petri net; complete training traces in completion order',
+                           'cases': len(replay), 'cases_fitting_complete_replay': fitted,
+                           'branch_frequencies': frequencies,
+                           'caveat': 'Training replay fit does not establish timing fidelity. Silent routing can be ambiguous; gateway draws assume independent stationary probabilities.'}
 
 
 def _gateway_replay_diagnosis(train, ids, graph):

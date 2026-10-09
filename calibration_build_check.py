@@ -92,6 +92,25 @@ def main():
     assert result['cases_all_observed_tasks_fired'] == 3
     assert result['branch_frequencies']['split'] == {'toA': 2, 'toB': 1}
     assert result['unfired_observed_tasks'] == {}
+    # A silent loop exit feeding a parallel join must be counted once per case.
+    import pm4py
+    tree = pm4py.parse_process_tree("->( +( *( 'A', tau ), 'B' ), 'C' )")
+    bpmn = pm4py.convert_to_bpmn(tree)
+    activities = ['A', 'A', 'A', 'A', 'B', 'C', 'A', 'B', 'C']
+    training = pd.DataFrame({'case_id': ['1'] * 6 + ['2'] * 3, 'activity': activities,
+                             'end_time': pd.date_range('2020-01-01', periods=9, tz='UTC')})
+    probabilities, evidence = environment._token_gateway_probabilities(training, bpmn)
+    assert evidence['cases_fitting_complete_replay'] == 2
+    assert len(probabilities) == 1
+    assert sorted(next(iter(evidence['branch_frequencies'].values())).values()) == [2, 3]
+    assert sorted(p['value'] for p in probabilities[0]['probabilities']) == [.4, .6]
+    invalid = training[training.activity != 'C']
+    try:
+        environment._token_gateway_probabilities(invalid, bpmn)
+    except ValueError as error:
+        assert 'refusing incomplete branch counts' in str(error)
+    else:
+        raise AssertionError('Incomplete replay was used for gateway probabilities')
     print('calibration build checks passed')
 
 
