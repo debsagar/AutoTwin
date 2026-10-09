@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+from environment import _termination_evidence
+
 ROOT = Path(__file__).resolve().parent
 
 
@@ -16,6 +18,8 @@ def export_view(name: str) -> dict:
     manifest = json.loads((bundle / 'manifest.json').read_text())
     if manifest.get('status') != 'generated_unvalidated':
         raise ValueError('Export requires a successful current build; stale artifacts are not exported.')
+    if _termination_evidence(bundle)['terminated_case_count']:
+        raise ValueError('Export rejected: baseline cases were terminated by the simulator loop limit. Rebuild before exporting.')
     tree = ET.parse(bundle / 'model.bpmn')
     nodes, edges, positions = [], [], {}
     for element in tree.iter():
@@ -63,7 +67,11 @@ def export_view(name: str) -> dict:
     for path in sorted((bundle / 'evaluations').glob('*/report.json')):
         evaluation = json.loads(path.read_text())
         inputs = evaluation.get('input_sha256', {})
-        if evaluation.get('status') == 'evaluated' and inputs.get('model.bpmn') == model_hash and all(
+        termination_failed = any(
+            r.get('termination', {}).get('terminated_case_count', 0)
+            or _termination_evidence(path.parent / f'seed-{r["seed"]}')['terminated_case_count']
+            for r in evaluation.get('replications', []))
+        if not termination_failed and evaluation.get('status') == 'evaluated' and inputs.get('model.bpmn') == model_hash and all(
                 (bundle / name).is_file() and hashlib.sha256((bundle / name).read_bytes()).hexdigest() == digest
                 for name, digest in inputs.items()):
             report['evaluations'].append({k: evaluation[k] for k in
@@ -103,6 +111,13 @@ def _self_check():
             assert data['nodes'][0]['position'] != data['nodes'][1]['position']
             assert result['events'] == result['cases'] == 1
             assert '/* THREE_LIBRARY */' not in html
+            (bundle / 'simulation_warnings.txt').write_text('Infinite loop was detected in case #0 on element task')
+            try:
+                export_view('check')
+            except ValueError as error:
+                assert 'loop limit' in str(error)
+            else:
+                raise AssertionError('Exported a legacy capped baseline')
             try:
                 export_view('../outside')
             except ValueError:

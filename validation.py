@@ -212,12 +212,12 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
                                      cwd=run, env={**os.environ, 'PYTHONHASHSEED': str(seed)},
                                      capture_output=True, text=True, timeout=600)
             (run / 'simulation.log').write_text(process.stdout + process.stderr)
-            if process.returncode:
-                raise RuntimeError(f'Seed {seed} failed; see {run / "simulation.log"}.')
             termination = _termination_evidence(run)
             if termination['terminated_case_count']:
                 report['failed_replication'] = {'seed': seed, 'termination': termination}
                 raise ValueError(f'Seed {seed} has {termination["terminated_case_count"]} cases terminated by the simulator loop limit; distances are not scored.')
+            if process.returncode:
+                raise RuntimeError(f'Seed {seed} failed; see {run / "simulation.log"}.')
             generated = _read(run / 'simulation.csv')
             if generated.case_id.nunique() != cases or 'start_time' not in generated or generated.start_time.isna().any():
                 raise ValueError(f'Seed {seed} generated incomplete cases or starts.')
@@ -248,6 +248,9 @@ def _simulate(bundle, output, seed, cases, epoch):
     np.random.seed(seed)
     run_simulation(str(bundle / 'model.bpmn'), str(bundle / 'parameters.json'), cases,
                    str(output / 'statistics.csv'), str(output / 'simulation.csv'), starting_at=epoch)
+    termination = _termination_evidence(output)
+    if termination['terminated_case_count']:
+        raise ValueError(f'Simulation has {termination["terminated_case_count"]} cases terminated by the simulator loop limit.')
 
 
 def _selfcheck():
@@ -278,6 +281,15 @@ def _selfcheck():
             else:
                 raise AssertionError('Failed builds cannot be evaluated.')
         assert not (bundle / 'evaluations').exists()
+        with patch('prosimos.simulation_engine.run_simulation') as simulate:
+            (bundle / 'simulation_warnings.txt').write_text('Infinite loop was detected in case #0 on element task')
+            try:
+                _simulate(bundle, bundle, 1, 1, '2020-01-01T00:00:00Z')
+            except ValueError as error:
+                assert 'loop limit' in str(error)
+            else:
+                raise AssertionError('Child accepted capped simulation')
+            simulate.assert_called_once()
     original = pd.DataFrame({'case_id': ['a', 'a', 'b'], 'activity': ['A', 'B', 'A'],
                              'end_time': pd.to_datetime(['2020-01-06T08:00Z', '2020-01-06T10:00Z', '2020-01-07T08:00Z'])})
     saved = original.copy(deep=True)

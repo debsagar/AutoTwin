@@ -68,6 +68,18 @@ def main():
             (nested / 'report.json').write_text(json.dumps(report))
             path, _ = tools._evaluation_report(root / 'runs/environments/original', 'runs/environments/original/evaluations/check')
             assert path == nested / 'report.json'
+        report['replications'] = [{'seed': 42}]
+        paths[0].write_text(json.dumps(report))
+        warning = root / 'seed-42/simulation_warnings.txt'
+        warning.parent.mkdir()
+        warning.write_text('Infinite loop was detected in case #0 on element task')
+        try:
+            tools.compare_evaluations([str(p) for p in paths])
+        except ValueError as error:
+            assert 'Loop-limit' in str(error)
+        else:
+            raise AssertionError('Compared legacy capped simulation')
+        warning.unlink()
         report['seeds'] = [43]
         paths[1].write_text(json.dumps(report))
         comparison = tools.compare_evaluations([str(p) for p in paths])

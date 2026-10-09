@@ -183,6 +183,11 @@ def compare_evaluations(paths: list[str]) -> dict:
                     'train_sha256': report['input_sha256'].get('train.csv')}
     if any(r['status'] != 'evaluated' for r in reports):
         raise ValueError('All reports must be completed evaluations.')
+    for path, report in zip(paths, reports):
+        if any(run.get('termination', {}).get('terminated_case_count', 0)
+               or environment._termination_evidence(Path(path).parent / f'seed-{run["seed"]}')['terminated_case_count']
+               for run in report.get('replications', [])):
+            raise ValueError('Loop-limit terminated simulations cannot be compared as completed evaluations.')
     baseline = protocol(reports[0])
     differences = [{k: {'baseline': baseline[k], 'candidate': value}
                     for k, value in protocol(r).items() if baseline[k] != value}
