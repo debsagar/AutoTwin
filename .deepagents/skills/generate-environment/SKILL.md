@@ -16,8 +16,12 @@ Do not require the user to know process-mining terminology or name each tool.
    `discover_process` only as a prefix overview. Record the case definition,
    dates, counts and exclusions returned by `prepare_environment`. Use its
    existing partition policy, not custom random sampling. If the size guard
-   rejects the selection, choose a justified narrower scope or raise the guard
-   within the available compute budget. Do not optimize scope for a better score.
+   rejects the selection, first narrow to a documented process family or
+   organizational cohort, or raise the guard within the compute budget. Do not
+   shrink windows merely to fit the cap: cover ordinary case lifetimes and weekly
+   work cycles. Before building, inspect retained multi-event traces and activity
+   coverage against the claimed process. Reconsider scope if selection leaves
+   mostly trivial traces. Do not optimize scope for a better score.
 2. **Build a baseline.** `build_environment` fits train only and verifies execution
    with a baseline simulation. During authorized generation, choose and document
    missing-start estimation if required, unless the user prohibited it. State
