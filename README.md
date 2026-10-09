@@ -21,7 +21,7 @@ come only from `.deepagents/skills/`; sessions stay in `.dcode/`.
 conversation, use `uv run python main.py -r` (most recent) or
 `uv run python main.py -r <thread-id>` (a specific conversation).
 Each conversation writes to `runs/workspaces/<thread-id>/`. A new conversation
-(including `/new`) gets a fresh workspace; resuming the same thread reuses it.
+(including `/clear`) gets a fresh workspace; resuming the same thread reuses it.
 The directory is created on the first model/tool request, not while the UI is
 idle. Raw `data/`, product code and skills stay shared; nothing is copied.
 Old runs remain where they are and can be read explicitly. New conversations
