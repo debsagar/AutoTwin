@@ -2,7 +2,6 @@
 from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import median
-from subprocess import TimeoutExpired
 
 
 def discover_process(path: str, max_cases: int = 5000) -> dict:
@@ -111,14 +110,15 @@ def build_environment(name: str, estimate_missing_starts: bool = False,
     """Build the executable Stage 1 environment from prepared evidence. Writes
     generated artifacts. For missing starts, estimate_missing_starts=True records
     the chosen modeling assumption; estimated durations are not observed evidence.
-    Supported settings: noise_threshold (0..1, default 0), gateway_method
+    Supported settings: discovery_method ("inductive" default, or "heuristics"), noise_threshold (0..1, default 0), gateway_method
     ("discovery", "equiprobable", or "token_replay", default "discovery"), arrival_filter_outliers
-    (bool, default False; PIX built-in interarrival outlier filtering). Filtering
+    (bool, default True, matching PIX; built-in interarrival outlier filtering). Filtering
     can collapse a batch-heavy log to zero interarrival time; inspect the fitted
     distribution before accepting it. token_replay counts complete PM4Py training
     replays, including silent loop exits, and rejects incomplete replay. Equally likely routes
-    are an explicit alternative assumption, not learned probabilities. Increasing
-    noise_threshold prunes infrequent behavior; inspect omitted activities before
+    are an explicit alternative assumption, not learned probabilities.
+    Heuristics discovery permits non-block-structured models; unsound nets are rejected.
+    Increasing noise_threshold prunes infrequent behavior; inspect omitted activities before
     treating a smaller distance as a defensible improvement.
     """
     from environment import build_environment as build
@@ -154,7 +154,7 @@ def revise_environment(source: str, name: str, reason: str, settings: dict) -> d
     """Build a separate candidate from the same input partitions. Supply an
     evidence-based reason and supported discovery settings. Source artifacts are
     preserved; evaluate the candidate with the same validation experiment. Settings
-    are noise_threshold (0..1), gateway_method (discovery, equiprobable, or token_replay),
+    are discovery_method (inductive or heuristics), noise_threshold (0..1; inductive only), gateway_method (discovery, equiprobable, or token_replay),
     and arrival_filter_outliers (bool; PIX built-in filtering).
     Omitted settings inherit the source settings.
     """
@@ -186,8 +186,8 @@ def install_runtime_policy():
     Explicit skill invocation has separate discovery and containment roots;
     keep those aligned with the runtime middleware and startup listing.
     Run in both launcher and extension: the server is a separate Python process.
-    No installed library is changed. Revisit these two overrides when dcode adds
-    supported configuration for skill sources and custom tool approval policies.
+    No installed library is changed. Revisit these overrides when dcode supports skill-source restrictions,
+    sandboxed extension tools and subagent middleware inheritance natively.
     """
     from deepagents_code import agent
 
@@ -204,15 +204,23 @@ def install_runtime_policy():
         (str(root / ".deepagents" / "skills"), "AutoTwin")]
     if getattr(agent._add_interrupt_on, "_autotwin", False):
         return
+    # dcode's explicit subagents do not inherit extension middleware.
+    native_create = agent.create_deep_agent
+    def create(**kwargs):
+        from workspace import middleware
+        for spec in kwargs.get('subagents') or []:
+            if 'runnable' in spec:
+                raise ValueError('Precompiled subagents cannot bypass AutoTwin isolation.')
+            spec['middleware'] = [*spec.get('middleware', []), middleware()]
+        return native_create(**kwargs)
+    agent.create_deep_agent = create
     native_interrupts = agent._add_interrupt_on
 
     def interrupts(**kwargs):
         policies = native_interrupts(**kwargs)
-        for name in ("prepare_environment", "build_environment", "revise_environment", "evaluate_environment", "export_view"):
-            policies[name] = {
-                **policies["write_file"],
-                "description": f"{name}: write AutoTwin environment artifacts.",
-            }
+        from sandbox import FILES, PROCESS
+        for name in {*FILES, *PROCESS, 'execute'}:
+            policies.pop(name, None)
         return policies
 
     interrupts._autotwin = True
@@ -229,17 +237,7 @@ async def extension(api):
     install_runtime_policy()
     from workspace import middleware
     api.register_middleware(middleware())
-    from functools import wraps
-
-    def recoverable(tool):
-        @wraps(tool)
-        def call(*args, **kwargs):
-            try:
-                return tool(*args, **kwargs)
-            except (ValueError, OSError, RuntimeError, TimeoutExpired) as error:
-                return {"status": "tool_error", "error": str(error), "error_type": type(error).__name__}
-        return call
 
     for tool in (discover_process, inspect_log_scope, prepare_environment, build_environment,
                  inspect_environment, revise_environment, evaluate_environment, compare_evaluations, export_view):
-        api.register_tool(recoverable(tool))
+        api.register_tool(tool)

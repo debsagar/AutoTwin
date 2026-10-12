@@ -242,9 +242,13 @@ def _discovery_settings(settings=None):
     """Validate only discovery options supported by the installed libraries."""
     if settings is None:
         settings = {}
-    if not isinstance(settings, dict) or set(settings) - {'noise_threshold', 'gateway_method', 'arrival_filter_outliers'}:
-        raise ValueError('settings accepts noise_threshold, gateway_method, and arrival_filter_outliers only.')
-    result = {'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': False, **settings}
+    if not isinstance(settings, dict) or set(settings) - {'discovery_method', 'noise_threshold', 'gateway_method', 'arrival_filter_outliers'}:
+        raise ValueError('settings accepts discovery_method, noise_threshold, gateway_method, and arrival_filter_outliers only.')
+    result = {'discovery_method': 'inductive', 'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': True, **settings}
+    if result['discovery_method'] not in ('inductive', 'heuristics'):
+        raise ValueError('discovery_method must be inductive or heuristics.')
+    if result['discovery_method'] == 'heuristics' and result['noise_threshold'] != 0:
+        raise ValueError('noise_threshold applies only to inductive discovery.')
     noise = result['noise_threshold']
     if type(noise) not in (int, float) or not math.isfinite(noise) or not 0 <= noise <= 1:
         raise ValueError('noise_threshold must be a finite number from 0 to 1.')
@@ -286,6 +290,29 @@ def build_environment(name: str, estimate_missing_starts: bool = False, settings
     return json.loads((bundle / 'report.json').read_text())
 
 
+def _discover_bpmn(train, settings, uuid_rng=None):
+    import pm4py
+    if settings['discovery_method'] == 'heuristics':
+        net, initial, final = pm4py.discover_petri_net_heuristics(train, activity_key='activity', case_id_key='case_id', timestamp_key='end_time')
+        from pm4py.algo.analysis.woflan import algorithm as woflan
+        if not woflan.apply(net, initial, final, parameters={'print_diagnostics': False}):
+            raise ValueError('Heuristics discovery produced an unsound net; candidate rejected.')
+        if uuid_rng is not None:
+            uuid_rng.seed(SEED)
+        return pm4py.convert_to_bpmn(net, initial, final)
+    tree = pm4py.discover_process_tree_inductive(train, activity_key='activity', case_id_key='case_id', timestamp_key='end_time', noise_threshold=settings['noise_threshold'])
+    from pm4py.objects.process_tree.obj import Operator
+    def canonicalize(node):
+        for child in node.children:
+            canonicalize(child)
+        if node.operator in {Operator.XOR, Operator.PARALLEL, Operator.OR}:
+            node.children.sort(key=str)
+    canonicalize(tree)
+    if uuid_rng is not None:
+        uuid_rng.seed(SEED)
+    return pm4py.convert_to_bpmn(tree)
+
+
 def _build(name, estimate, settings=None):
     settings = _discovery_settings(settings)
     # Child-process-only UUID stream: BPMN IDs affect set iteration and PIX replay.
@@ -313,7 +340,7 @@ def _build(name, estimate, settings=None):
     train = pd.read_csv(bundle / 'train.csv', dtype={'case_id': str, 'activity': str, 'resource': str},
                         keep_default_na=False, na_values={'start_time': ['']})
     for col in ['start_time', 'end_time']:
-        train[col] = pd.to_datetime(train[col], utc=True)
+        train[col] = pd.to_datetime(train[col], utc=True, format='mixed')
     if train.start_time.isna().any():
         if not estimate:
             raise ValueError('Missing starts require explicit estimation consent.')
@@ -321,16 +348,7 @@ def _build(name, estimate, settings=None):
     if train.start_time.isna().any() or (train.start_time > train.end_time).any():
         raise ValueError('Start estimation left invalid durations.')
     train.to_csv(bundle / 'train_fitted.csv', index=False)
-    tree = pm4py.discover_process_tree_inductive(train, activity_key='activity', case_id_key='case_id', timestamp_key='end_time', noise_threshold=settings['noise_threshold'])
-    from pm4py.objects.process_tree.obj import Operator
-    def canonicalize(node):
-        for child in node.children:
-            canonicalize(child)
-        if node.operator in {Operator.XOR, Operator.PARALLEL, Operator.OR}:
-            node.children.sort(key=str)
-    canonicalize(tree)
-    uuid_rng.seed(SEED)
-    bpmn = pm4py.convert_to_bpmn(tree)
+    bpmn = _discover_bpmn(train, settings, uuid_rng)
     # PM4Py stores flows in identity-hashed sets; stable export order matters to replay.
     nodes, flows = list(bpmn.get_nodes()), list(bpmn.get_flows())
     bpmn.get_nodes = lambda: sorted(nodes, key=lambda n: str(n.get_id()))

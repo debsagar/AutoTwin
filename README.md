@@ -1,212 +1,93 @@
-# AutoTwin — Stage 1
+# AutoTwin
 
-A conversational terminal agent that turns selected event-log evidence into a
-candidate business-process simulation. The agent chooses scope and diagnostics;
-tools execute extraction, discovery, simulation and comparison.
+**Give AutoTwin a process event log. Get a process simulation, a report on how well it matches the log, and evidence for what to investigate next.**
 
-## Open the agent
+Use it from the terminal: ask a question, let the agent inspect the data and run experiments, then review its results. You can follow its work and ask it to change direction.
+
+## What goes in, what comes out
+
+**Input:** an XES event log. Each event identifies a case (such as a purchase order), an activity, and when it finished. Recorded start times and resource identities help reconstruct timing and workload. Other file formats need conversion first.
+
+**Output:**
+
+- An executable process model: a BPMN diagram and simulation parameters.
+- A comparison with recorded cases: process paths, completion times, arrival patterns, and differences across simulation runs.
+- An interactive HTML replay showing cases moving through activities, with timing and evaluation results.
+- A written report explaining the findings, assumptions, and remaining gaps.
+
+The first stage reconstructs and checks the process. The next stage uses that model to investigate changes. Costs, service targets, staffing rules, and what can actually change need to come from you; the log does not establish them.
+
+## Worked example: purchasing through invoice payment
+
+We used a [published synthetic procurement log](https://zenodo.org/records/10435849): **1,000 cases, 13,290 events, and 24 activities**, covering requisitions, quotations, delivery, and payment. This is a generated research dataset, not a company's production history.
+
+AutoTwin built a simulation, compared it with later recorded cases, and kept a frozen model for follow-up analysis. In the five-run final assessment, the mean cycle-time ratio was about **1.22×** the recorded value and cycle-time distance averaged **9.55 hours**. No false early endings were observed in those checks. Timing differences remained, so this is a development baseline, not a validated replica of a business.
+
+We then asked it to **diagnose the baseline and propose one improvement without removing approvals**. It wrote and ran an analysis against the saved evidence:
+
+| Finding in the validation data | Result |
+|---|---:|
+| Cases ending in invoice payment | 118 of 221 |
+| Mean time to payment for those cases | 61.76 hours |
+| Mean time across all cases, including early endings | 34.95 hours |
+| Delivery and quotation-comparison intervals combined | 63.5% of paid-case time |
+
+The distinction matters: early-ending cases make the overall average look faster. The activity intervals also include non-working hours; they are not all removable work.
+
+**Proposed experiment:** use structured supplier quotes or a comparison template, modeled as a 20% reduction in quotation-comparison working duration. Keep approvals, staffing, schedules, and routing unchanged.
+
+**Result so far:** diagnosis and an experiment proposal. The 20% saving is an assumption to test, not an achieved improvement. No intervention was run in this example.
+
+## Clone and run
+
+You need **Python 3.12**, [uv](https://docs.astral.sh/uv/getting-started/installation/), a running Docker engine, and an OpenRouter API key. Model calls incur API charges.
 
 ```sh
-cd /data/autotwin
+git clone https://github.com/debsagar/AutoTwin.git
+cd AutoTwin
+uv sync --frozen
+export OPENROUTER_API_KEY="your-key"
+docker build -t autotwin-worker:local .
 uv run python main.py
 ```
 
-Python 3.12 and uv are required. Credentials stay in local `.env`. Startup is
-idle. Native Manual mode retains approvals for writing tools. Product skills
-come only from `.deepagents/skills/`; sessions stay in `.dcode/`.
+The default model is `openrouter:openai/gpt-5.6-luna`. To choose another available model, append `--model openrouter:<model-id>` to the launch command.
 
-### Restart and resume
+### Try the example dataset
 
-`uv run python main.py` starts a new conversation. To continue an interactive
-conversation, use `uv run python main.py -r` (most recent) or
-`uv run python main.py -r <thread-id>` (a specific conversation).
-Each conversation writes to `runs/workspaces/<thread-id>/`. A new conversation
-(including `/clear`) gets a fresh workspace; resuming the same thread reuses it.
-The directory is created on the first model/tool request, not while the UI is
-idle. Raw `data/`, product code and skills stay shared; nothing is copied.
-Old runs remain where they are and can be read explicitly. New conversations
-do not inherit the previous chat or candidate names. Workspaces accumulate
-until you remove them; restarting does not reset their files.
-
-In the pinned CLI version, headless mode (`-n`) does not resume threads. A
-headless-created thread can display its history in the interactive UI but cannot
-continue there if its recorded tool policy differs. Start a new interactive
-conversation and point it to the saved run instead. Do not disable approvals to
-work around a policy mismatch.
-
-The default CLI runs tools directly on this VM, not in a sandbox. Restarting
-reloads Python code; it does not undo file changes or guarantee that interrupted
-work has completed. Inspect the saved results before continuing.
-
-## Run Stage 1 inside the CLI
-
-Enter this in the interactive agent, not in your shell:
-
-```text
-/skill:stage1 data/bpi2019/BPI_Challenge_2019.xes — complete Stage 1, with at most two evidence-backed revisions
-```
-
-This native slash command delegates discovery, generation, validation, candidate
-selection, final assessment, replay export and reporting to the agent. Replace
-the dataset and constraints as needed. It preserves native tool approvals;
-it does not launch a separate scripted workflow. Use `/reload` to refresh skills
-in an already-open CLI, or restart to load changed Python tools.
-
-The agent owns technical choices within that task. It asks only for missing
-business facts essential to proceed. Invalid simulations cannot be selected;
-the result can be **no acceptable candidate**. Stage 2 remains separate.
-
-Ordinary conversation also works. Narrower skills remain available as
-`/skill:discover-operation` and `/skill:generate-environment`.
-
-## Capabilities
-
-| Agent tool | Result |
-|---|---|
-| `discover_process` | Exploratory PM4Py paths and handovers from a disclosed file prefix. |
-| `inspect_log_scope` | Full-file coverage, categories and monthly first/last observed case timestamps. |
-| `prepare_environment` | Whole observed cases in caller-chosen train/validation/test windows; optional cohort filter, source hash and exclusion counts. |
-| `build_environment` | PM4Py BPMN, PIX parameters and a 200-case execution check, with explicit discovery settings and replay diagnostics. |
-| `inspect_environment` | Recorded/generated repetitions, timing and routing evidence for investigating a mismatch. |
-| `revise_environment` | Separate candidate built from unchanged partitions, inherited settings and a recorded reason. |
-| `compare_evaluations` | Metric results and settings, with experiment compatibility checks; no automatic winner. |
-| `evaluate_environment` | Available metric catalog or selected log-distance comparisons across caller-chosen seeds and partition. |
-| `export_view` | Standalone offline Three.js replay of the generated baseline trace. |
-
-Preparation takes explicit half-open windows, for example
-`{"train":{"start":"2018-01-01","end":"2018-04-01"}}`; dates mean UTC
-midnight. Validation and test windows are optional. There is no automatic split
-ratio or category. `max_cases` rejects an oversized selection rather than
-randomly dropping cases. An overlap or empty requested partition is rejected.
-
-The XES mapping is trace ID, activity, completion timestamp, optional
-`start_timestamp`, and resource. Other formats need a mapping/conversion first.
-
-## Evaluation, not automatic certification
-
-Building does not access validation or test files. Evaluation is a separate
-agent choice. `metrics=None` returns the metric catalog without simulating;
-otherwise supply metric names and explicit seeds. Each evaluation also computes
-PM4Py alignment-based fitness and precision against the observed split. Results include each run,
-mean, standard deviation, metric definitions and input hashes. They are written
-to unique `evaluations/` folders; the model and baseline are unchanged.
-
-Completion-only metrics cover activity trigrams, first-to-last completion spans,
-first-completion arrival proxies, within-case completion timing and weekly
-completion patterns, plus absolute completion timestamps. These use `log-distance-measures`. Full start-to-end cycle
-time and first-start arrival metrics require recorded starts. Resource workload
-metrics are not implemented. No metric threshold declares a model valid.
-
-Important limits:
-
-- Whole-case containment excludes crossing cases and favors shorter cases near
-  boundaries. Category filtering can omit competing work. Neither restores the
-  full operation; the agent must assess those exclusions.
-- Completion-only logs do not measure work duration or true case arrivals.
-  Missing starts require accepted PIX estimation. Inferred calendars are not
-  staffing rosters; missing identities retain the prototype's assumed 200
-  external slots, not measured employees.
-- Evaluation starts with an empty system, without warm-up or existing backlog.
-  A good historical distance does not establish intervention validity.
-- The agent can investigate, revise and compare candidates. Supported discovery
-  settings are Inductive Miner `noise_threshold` and PIX `gateway_method`
-  (`discovery`, `equiprobable`, or `token_replay`), plus PIX `arrival_filter_outliers`.
-  `token_replay` counts complete PM4Py training replays, including silent loop
-  exits; it rejects incomplete replay and currently supports exclusive/parallel
-  gateways. It does not make timing assumptions or intervention effects valid.
-  Arrival filtering is an explicit assumption and can collapse batch-heavy
-  arrivals to zero gaps. Pruning may omit rare behavior; equiprobable
-  routing is an assumption, not learned behavior. No numerical optimizer or
-  Stage 2 operational intervention/agent-policy evaluation is implemented.
-
-## Files and prior example
-
-Start with `runs/workspaces/<thread-id>/report.md`, the final Stage 1 report.
-Models live in that workspace’s `environments/<name>/`: manifest, named partition CSVs,
-`train_fitted.csv`, BPMN, parameter JSON, baseline simulation, build report,
-evaluations and optional HTML. Existing prepared names are not overwritten.
-Rebuilding updates model/baseline; export the HTML again afterward.
-
-Older runs are retained as development evidence under `runs/`. Their results
-are not the final Stage 1 assessment. Use the trial evidence below; a completed workflow is not a fidelity pass.
-
-The visualization represents process activity stations, not recovered warehouse
-geometry. It replays simulator output; it does not run Python in the browser.
-
-## Small implementation
-
-`main.py` launches dcode. `process_mining.py` registers tools and the local skill
-and approval compatibility overrides. `environment.py` prepares and builds;
-`validation.py` runs comparisons; `model_tools.py` inspects and revises models;
-`viewer.py` and `visual/` export the replay with matching evaluation summaries.
-Versions are pinned. `workspace.py` uses the native thread ID and supported
-[extension middleware](https://docs.langchain.com/oss/deepagents/code/extensions)
-to scope product tools and native file paths. Conversation
-[persistence](https://docs.langchain.com/oss/python/langgraph/persistence) stays
-with dcode; no custom chat store or orchestration framework. Native shell
-commands start in the workspace but can access absolute paths: this is output
-organization, not an OS sandbox. Standalone developer scripts retain the legacy
-`runs/environments/` default.
-
-Focused developer checks:
+Before opening the CLI, download the published sample and convert it to XES:
 
 ```sh
-uv run python workspace_check.py
-uv run python temporal_selection_check.py
-uv run python validation.py --selfcheck
-uv run python calibration_build_check.py
-uv run python model_tools_check.py
-uv run python viewer.py
+uv run python scripts/fetch_example.py
+uv run python main.py
 ```
 
-These check implementation integrity, not operational validity. Real CLI evidence
-for this revision is recorded under `runs/temporal-cli/`; Luna selected a
-2-way-match cohort, generated a model, evaluated two seeds and reported a severe
-mismatch. Successful tooling does not mean successful modeling. Development
-history is in [PROJECT-LOG.jsonl](PROJECT-LOG.jsonl).
+Inside the CLI, enter:
 
-Methods: [generation skill](.deepagents/skills/generate-environment/SKILL.md).
-Data: [Boudewijn van Dongen, BPI Challenge 2019](https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1), CC BY 4.0.
-Three.js attribution is in `visual/vendor/`.
+```text
+/skill:stage1 data/benchmark/p2p_synthetic.xes — reconstruct the process, validate against later cases, compare at most two evidence-backed revisions, and export the replay and report.
+```
 
-## Stage 1 trial evidence
+The download script verifies the archive and preserves case IDs, activities, resources, and start/end timestamps. It does not download the reference model into the agent's workspace.
 
-The fresh CLI task, full transcript, agent performance counts, selection record,
-and final assessment are under `runs/stage1-transfer/`. The task uses the native
-CLI with a bounded run; no additional orchestrator or automatic grading model.
-Simulation fidelity and agent task completion are reported separately.
+This reproduces the **workflow on the same input**, not the exact saved conversation or scores: the agent chooses its analysis and model settings. Historical runs and checkpoints are not included in the repository.
 
-- `report.md`: agent's model assessment and artifact paths.
-- `agent-metrics.json`: recorded calls, failures, runtime, tokens and cost.
-- `selection.json`: candidate choice recorded before final test evaluation.
-- `task.txt` and `transcript.json`: reproducible assignment and execution evidence.
+### Read the results and continue
 
-Process fitness/precision measure structural conformance. Log distances measure
-historical distribution similarity. Neither is a certificate of causal validity
-or a claim that staffing changes will have a predicted effect.
+Each conversation saves its work under `runs/workspaces/<thread-id>/`. Start with `report.md`; model files and `environment.html` live under `environments/<candidate>/`. Open the HTML in a browser. On a remote VM, download it first; it works offline.
 
-The Terra comparison is in `runs/stage1-terra/` (actual model:
-`openai/gpt-5.6-terra`). Its historical baseline and final-test distances are
-invalid for selection: Prosimos terminated cases at its loop limit. The original
-agent report is preserved; `review.md` records the correction. Current tools
-reject these runs. Earlier Luna trials also showed large fidelity gaps.
+Resume your latest interactive conversation with:
 
-### Routing fidelity follow-up
+```sh
+uv run python main.py -r
+```
 
-`gateway_method="token_replay"` fixes missed silent loop exits using complete
-training replays. It leaves the BPMN, fitted timings, arrivals and resources
-unchanged. Three-seed validation on the larger saved cohort reduced trigram
-distance from 0.629 to 0.443 and completion-span distance from 1,047 to 410 hours.
-Circadian distance did not improve (5.663 to 5.679 hours). These are validation
-diagnostics, not a new held-out test or an operational-validity pass.
+Once a baseline is ready, ask in that conversation:
 
-- `runs/stage1-fidelity/report.md`: controlled two-cohort investigation.
-- `runs/stage1-fidelity-agent/report.md` and `review.md`: actual CLI agent run and independent audit.
-- `runs/stage1-fidelity-agent/agent-metrics.json`: 28 tool calls, three recovered
-  inspection-path errors, 319 seconds, recorded model cost about $0.075.
-- `artifacts/autotwin-stage1.html`: current agent-generated diagnostic replay.
+```text
+Diagnose this baseline and propose one improvement experiment. Explain the evidence and the business inputs needed before running it.
+```
 
-The comparison tool currently treats changed boundary-description prose as a
-protocol difference. The independent audit verifies that the historical and new
-runs used the same actual simulation settings; original reports are preserved.
-Timing mismatch and unavailable bounded alignment conformance remain limitations.
+Inputs remain read-only; generated files stay in the conversation's workspace. Rebuild the Docker image after changing tools or skills. Data, runs, local sessions, and credentials are excluded from Git.
+
+For the next stage's methodology, see [the process-improvement workflow](docs/stage2-workflow.md).

@@ -9,11 +9,12 @@ import environment
 
 
 def main():
-    assert environment._discovery_settings() == {'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': False}
+    assert environment._discovery_settings() == {'discovery_method': 'inductive', 'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': True}
+    assert environment._discovery_settings({'arrival_filter_outliers': False})['arrival_filter_outliers'] is False
     assert environment._discovery_settings({'noise_threshold': .1})['noise_threshold'] == .1
     for settings in ({'noise_threshold': True}, {'noise_threshold': float('nan')},
                      {'noise_threshold': -1}, {'noise_threshold': 1.1},
-                     {'gateway_method': 'invented'}, {'arrival_filter_outliers': 1}, {'unknown': 1}, []):
+                     {'discovery_method': 'invented'}, {'discovery_method': 'heuristics', 'noise_threshold': .1}, {'gateway_method': 'invented'}, {'arrival_filter_outliers': 1}, {'unknown': 1}, []):
         try:
             environment._discovery_settings(settings)
         except ValueError:
@@ -35,7 +36,7 @@ def main():
             environment.build_environment('fixture', True, {'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True})
             command = run.call_args.args[0]
             assert command[-2] == '1'
-            assert json.loads(command[-1]) == {'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True}
+            assert json.loads(command[-1]) == {'discovery_method': 'inductive', 'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True}
     with tempfile.TemporaryDirectory() as folder:
         import pandas as pd
         bundle = Path(folder)
@@ -111,6 +112,27 @@ def main():
         assert 'refusing incomplete branch counts' in str(error)
     else:
         raise AssertionError('Incomplete replay was used for gateway probabilities')
+    # A branch may end after review, but never after creating a quotation.
+    variants = [['Start', 'Review'], ['Start', 'Review', 'Create', 'Analyze'], ['Start', 'Alternate', 'Analyze']] * 10
+    fixture = pd.DataFrame([{'case_id': str(i), 'activity': a, 'end_time': pd.Timestamp('2023-01-01', tz='UTC') + pd.Timedelta(minutes=j)}
+                            for i, trace in enumerate(variants) for j, a in enumerate(trace)])
+    discovered = environment._discover_bpmn(fixture, environment._discovery_settings({'discovery_method': 'heuristics'}))
+    environment._token_gateway_probabilities(fixture, discovered)
+    net, initial, final = pm4py.convert_to_petri_net(discovered)
+    bad = fixture[fixture.case_id == '1'].iloc[:-1]
+    fitness = pm4py.fitness_token_based_replay(bad, net, initial, final, activity_key='activity', case_id_key='case_id', timestamp_key='end_time')
+    assert fitness['percentage_of_fitting_traces'] == 0
+    # Both native discovery methods must return executable, replayable BPMN.
+    for method in ('inductive', 'heuristics'):
+        discovered = environment._discover_bpmn(training, environment._discovery_settings({'discovery_method': method}))
+        environment._token_gateway_probabilities(training, discovered)
+    with patch('pm4py.algo.analysis.woflan.algorithm.apply', return_value=False):
+        try:
+            environment._discover_bpmn(training, environment._discovery_settings({'discovery_method': 'heuristics'}))
+        except ValueError as error:
+            assert 'unsound' in str(error)
+        else:
+            raise AssertionError('Unsound discovery was accepted')
     print('calibration build checks passed')
 
 

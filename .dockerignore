@@ -1,0 +1,16 @@
+*
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!main.py
+!workspace.py
+!process_mining.py
+!environment.py
+!model_tools.py
+!validation.py
+!viewer.py
+!sandbox.py
+!.deepagents/
+!.deepagents/**
+!visual/
+!visual/**

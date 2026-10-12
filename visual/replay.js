@@ -115,7 +115,7 @@ for (const row of DATA.records) {
 }
 for (const [id, rows] of cases) {
   rows.sort((a, b) => a.start_time - b.start_time);
-  $("case").add(new Option(id, id));
+  $("case").add(new Option(`${id} · ${rows.length} events`, id));
 }
 let rows = [],
   start = 0,
@@ -125,7 +125,10 @@ let rows = [],
   last = performance.now();
 const fmt = (t) =>
   new Date(t).toISOString().replace("T", " ").replace(".000Z", " UTC");
-const activity = (name) => stations.find((m) => m.userData.name === name);
+const activity = (name) => {
+  const matches = stations.filter((m) => m.userData.name === name);
+  return matches.length === 1 ? matches[0] : null;
+};
 function select() {
   rows = cases.get($("case").value) || [];
   start = Math.min(...rows.map((r) => r.enable_time));
@@ -154,6 +157,7 @@ function select() {
     scene.add(token);
     tokens.push(token);
   }
+  caseEvidence();
   update();
 }
 function update() {
@@ -175,22 +179,7 @@ function update() {
     token.position.copy(station.position);
     token.position.y = 40 + (i % 3) * 15;
     token.material.color.set(now < r.start_time ? "#a8c6e6" : "#ffcf70");
-    if (now >= r.start_time) {
-      const progress =
-        (now - r.start_time) / Math.max(1, r.end_time - r.start_time);
-      token.position.x += Math.cos(progress * Math.PI * 8) * 30;
-      token.position.z += Math.sin(progress * Math.PI * 8) * 30;
-    }
-    if (now < r.start_time) {
-      const prev = rows.filter((v) => v.end_time <= r.enable_time).at(-1),
-        source = prev && activity(prev.activity);
-      if (source) {
-        const fraction =
-          (now - r.enable_time) / Math.max(1, r.start_time - r.enable_time);
-        token.position.lerp(source.position, 1 - fraction);
-        token.position.y = 38;
-      }
-    }
+
   });
   $("detail").replaceChildren();
   const heading = document.createElement("h2");
@@ -210,6 +199,8 @@ $("play").onclick = () => {
 };
 $("reset").onclick = select;
 $("scrub").oninput = (e) => {
+  playing = false;
+  $("play").textContent = "Play";
   now = start + ((end - start) * Number(e.target.value)) / 1000;
   update();
 };
@@ -269,10 +260,8 @@ renderer.domElement.onpointerup = (e) => {
   );
   const hit = ray.intersectObjects(stations)[0];
   if (hit) {
-    const n = hit.object.userData;
-    const p = document.createElement("p");
-    p.textContent = `Station: ${n.name} (${n.kind}) · ${DATA.records.filter((r) => r.activity === n.name).length} events in generated run. BPMN ID: ${n.id}`;
-    $("detail").prepend(p);
+    $("activity").value = hit.object.userData.id;
+    inspectActivity();
   }
 };
 renderer.domElement.onwheel = (e) => {
@@ -288,6 +277,96 @@ new ResizeObserver(() => {
   camera.aspect = host.clientWidth / host.clientHeight;
   camera.updateProjectionMatrix();
 }).observe(host);
+
+function textElement(tag, text, parent) {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  parent.append(node);
+  return node;
+}
+const hours = (ms) => `${(ms / 3600000).toFixed(2)} h`;
+function caseEvidence() {
+  $("events-title").textContent = `Generated case ${$("case").value} · exact event evidence`;
+  $("case-span").textContent = `${rows.length} events · ${hours(end - start)} from first enable to last completion`;
+  const body = $("events").tBodies[0];
+  body.replaceChildren();
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    for (const value of [`${r.activity} / ${r.resource}`, fmt(r.enable_time), fmt(r.start_time), fmt(r.end_time), `${hours(r.start_time - r.enable_time)} / ${hours(r.end_time - r.start_time)}`])
+      textElement("td", value, tr);
+    body.append(tr);
+  }
+}
+function inspectActivity() {
+  const n = DATA.nodes.find((n) => n.id === $("activity").value);
+  const panel = $("node-detail");
+  panel.replaceChildren();
+  if (!n) return;
+  textElement("strong", n.name, panel);
+  textElement("p", `${n.kind} · BPMN ID: ${n.id}`, panel);
+  const matches = DATA.records.filter((r) => r.activity === n.name);
+  const ids = [...new Set(matches.map((r) => r.case_id))];
+  textElement("p", `${matches.length} generated events · ${ids.length} generated cases (activity-name matches across the baseline)`, panel);
+  if (DATA.nodes.filter((v) => v.name === n.name).length > 1)
+    textElement("p", "Duplicate model label: records have no node ID, so these counts cannot be assigned to this node alone. Replay tokens are omitted for ambiguous labels.", panel);
+  if (ids.length) {
+    const label = textElement("label", "Inspect a matching generated case ", panel);
+    const choices = document.createElement("select");
+    choices.setAttribute("aria-label", "Cases containing selected activity");
+    choices.add(new Option("Select case…", ""));
+    for (const id of ids) choices.add(new Option(id, id));
+    choices.onchange = () => { if (choices.value) { $("case").value = choices.value; select(); } };
+    label.append(choices);
+  }
+}
+$("activity").add(new Option("Select activity…", ""));
+for (const n of DATA.nodes) $("activity").add(new Option(`${n.name} [${n.id}]`, n.id));
+$("activity").onchange = inspectActivity;
+$("title").textContent = DATA.name;
+document.title = `${DATA.name} · AutoTwin`;
+$("subtitle").textContent = `Generated baseline · ${DATA.manifest.source?.split("/").at(-1) || "Source not recorded"} · ${DATA.manifest.status}`;
+const first = Math.min(...DATA.records.map((r) => r.enable_time));
+const lastEvent = Math.max(...DATA.records.map((r) => r.end_time));
+for (const [value, label] of [[cases.size, "Generated cases"], [DATA.records.length, "Generated events"], [DATA.report.evaluations?.length || "Not evaluated", "Compatible evaluations"]]) {
+  const stat = textElement("div", "", $("overview"));
+  stat.className = "stat";
+  textElement("strong", value, stat);
+  textElement("span", label, stat);
+}
+textElement("p", `Generated range: ${fmt(first)} → ${fmt(lastEvent)}`, $("overview"));
+const scope = DATA.manifest.scope || {};
+const training = scope.split?.train;
+textElement("p", `Observed training cohort: ${training?.cases ?? "not recorded"} cases · ${training?.events ?? "not recorded"} events.`, $("scope"));
+if (scope.partitions?.train) textElement("p", `Training window [start, end): ${scope.partitions.train.start} → ${scope.partitions.train.end}`, $("scope"));
+textElement("p", `Cohort: ${scope.case_value ?? "All selected categories"}. Exclusions: ${JSON.stringify(scope.excluded || {})}. Missing observed starts: ${DATA.manifest.quality?.missing_starts ?? "not recorded"}.`, $("scope"));
+if (scope.caveat) textElement("p", scope.caveat, $("scope"));
+for (const [key, value] of Object.entries(DATA.report.assumptions || {})) {
+  textElement("dt", key.replaceAll("_", " "), $("assumptions"));
+  textElement("dd", typeof value === "string" ? value : JSON.stringify(value), $("assumptions"));
+}
+$("hashes").textContent = JSON.stringify(DATA.artifact_sha256, null, 2);
+if (!DATA.report.evaluations?.length) textElement("p", "Not evaluated. Ask the agent to evaluate a partition with explicit metrics and seeds, then export again.", $("validation"));
+for (const e of DATA.report.evaluations || []) {
+  textElement("h3", `${e.split} partition · ${e.cases} generated cases per seed · seeds ${(e.seeds || []).join(", ")}`, $("validation"));
+  textElement("p", `Observed cases: ${e.observed_cases ?? "not recorded"} · Source: ${e.source_file}`, $("validation"));
+  const wrapper = textElement("div", "", $("validation"));
+  wrapper.className = "table-scroll";
+  const table = textElement("table", "", wrapper);
+  const head = textElement("tr", "", textElement("thead", "", table));
+  for (const label of ["Metric / units", "Mean", "Population SD", "Definition and limits"]) textElement("th", label, head);
+  const body = textElement("tbody", "", table);
+  for (const [name, metric] of Object.entries(e.summary || {})) {
+    const row = textElement("tr", "", body);
+    for (const value of [name.replaceAll("_", " ") + " / " + (metric.units || "see report"), Number(metric.mean).toPrecision(4), Number(metric.std).toPrecision(4), `${metric.definition || ""} ${metric.caveats || ""}`]) textElement("td", value, row);
+  }
+  textElement("p", e.interpretation || "See recorded metric definitions; no acceptance threshold is inferred.", $("validation"));
+  if (e.boundary_policy) textElement("p", e.boundary_policy, $("validation"));
+  if (e.conformance) {
+    const detail = textElement("details", "", $("validation"));
+    textElement("summary", `Structural conformance · ${e.conformance.status || "recorded"}`, detail);
+    textElement("pre", JSON.stringify(e.conformance, null, 2), detail);
+  }
+}
 select();
 function frame(t) {
   if (playing) {

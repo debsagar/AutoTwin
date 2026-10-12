@@ -75,10 +75,13 @@ def export_view(name: str) -> dict:
         if not termination_failed and evaluation.get('status') == 'evaluated' and inputs.get('model.bpmn') == model_hash and all(
                 (bundle / name).is_file() and hashlib.sha256((bundle / name).read_bytes()).hexdigest() == digest
                 for name, digest in inputs.items()):
-            report['evaluations'].append({k: evaluation[k] for k in
-                ('split', 'cases', 'seeds', 'starting_at', 'summary', 'interpretation', 'conformance') if k in evaluation})
+            report['evaluations'].append({'source_file': str(path.relative_to(bundle)), **{k: evaluation[k] for k in
+                ('split', 'cases', 'observed_cases', 'seeds', 'starting_at', 'summary', 'metric_definitions',
+                 'boundary_policy', 'interpretation', 'conformance', 'input_sha256') if k in evaluation}})
     data = {'name': name, 'nodes': nodes, 'edges': edges, 'records': records,
-            'report': report, 'manifest': manifest}
+            'report': report, 'manifest': manifest,
+            'artifact_sha256': {file: hashlib.sha256((bundle / file).read_bytes()).hexdigest()
+                                for file in ('model.bpmn', 'simulation.csv', 'report.json', 'manifest.json')}}
     # Embedded scripts stay inert even when a source label contains HTML.
     encoded = json.dumps(data).replace('<', '\\u003c')
     template = (ROOT / 'visual' / 'template.html').read_text()
@@ -111,6 +114,10 @@ def _self_check():
             assert data['nodes'][0]['name'] == '</script>'
             assert data['nodes'][0]['position'] != data['nodes'][1]['position']
             assert result['events'] == result['cases'] == 1
+            assert data['report']['evaluations'] == []
+            assert data['artifact_sha256']['simulation.csv'] == hashlib.sha256((bundle / 'simulation.csv').read_bytes()).hexdigest()
+            assert 'Generated procurement' not in html
+            assert 'id="events"' in html and 'id="validation"' in html
             assert '/* THREE_LIBRARY */' not in html
             (bundle / 'simulation_warnings.txt').write_text('Infinite loop was detected in case #0 on element task')
             try:

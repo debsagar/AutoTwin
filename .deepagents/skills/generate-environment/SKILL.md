@@ -36,8 +36,9 @@ Do not require the user to know process-mining terminology or name each tool.
    Use validation for this work; leave test untouched.
 4. **Calibrate.** If a material discrepancy appears, use `inspect_environment`
    and the underlying files to examine repetitions, timing, routing and resources.
-   State an explanation supported by evidence, then test a supported revision
-   with `revise_environment`. Compare candidates using `compare_evaluations`
+   State an explanation supported by evidence, then test a revision with `revise_environment` or a workspace experiment.
+   Inspect installed library source and write code when the existing tool cannot
+   express the investigation. Verify experimental models before scoring them. Compare candidates using `compare_evaluations`
    with the same validation data, seeds, case count, metrics and epoch. Report
    regressions and omitted activities. Do not change workforce or business rules
    merely to force a better fit. Retain the baseline if candidates are worse.
@@ -60,8 +61,9 @@ that scope. Reuse saved artifacts when resuming; check their provenance first.
 ## Keep the investigation bounded and honest
 
 Use the user's experiment budget if provided. Otherwise, start with the baseline
-and a small number of evidence-backed candidates. Stop when no justified supported
-revision remains, validation stops improving, or the budget is reached. A missing
+and a small number of evidence-backed candidates. Stop when the model is useful for the stated scope, no evidence-backed improvement
+remains after investigation, or the budget is reached. Lack of a tool option alone
+is not a stopping condition. A missing
 mechanism is a finding, not permission to invent one. Do not endlessly tune.
 
 Verification asks whether the model executes correctly. Validation asks whether

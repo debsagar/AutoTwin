@@ -17,3 +17,15 @@ CLAUDE.md
 
 # Product runtime instructions belong in the source tree.
 !.deepagents/AGENTS.md
+
+# Local Python/build caches and exported bundles.
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+*.zip
+*.tar.gz
+*.tgz
+.DS_Store

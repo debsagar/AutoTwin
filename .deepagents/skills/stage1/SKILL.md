@@ -15,14 +15,15 @@ path when starting. Write the final evidence report to `<workspace>/report.md`;
 keep candidates under `<workspace>/environments/<name>/` and link their artifacts
 from that report. Use absolute paths for generated files and shared raw data.
 Existing runs are retained; do not automatically copy or move them into this
-conversation. Raw data, product code and skills stay shared.
+conversation. Raw data and product source are read-only in the sandbox; only this task workspace persists.
 
 Read and follow `.deepagents/skills/discover-operation/SKILL.md`, then
 `.deepagents/skills/generate-environment/SKILL.md`. You, the agent, own the
 investigation: discover, prepare, build, evaluate, revise within budget, select
 on validation, assess on held-out test, export the view and write the evidence
 report. Continue through the authorized scope without requiring the user to
-direct individual tools. Preserve native approvals and the Stage 2 boundary.
+direct individual tools. Use workspace code and independent experiments when the tools are insufficient.
+Preserve the Stage 2 boundary.
 
 Reject invalid executions, including loop-capped or incomplete simulations,
 before fidelity scoring or selection. A generated model is not automatically a
