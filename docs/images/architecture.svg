@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1020" viewBox="0 0 1200 1020" role="img" aria-labelledby="title desc">
+<title id="title">AutoTwin: from an event log to an examined process model</title>
+<desc id="desc">A user gives an event log and objective to a terminal agent. Guided by skills, the agent calls process tools or writes code inside isolated Docker workers. Evidence returns to the agent for further investigation. Files persist in one conversation workspace. Outputs are a process model, fidelity report, and interactive replay. Input data or an optional frozen baseline is read-only.</desc>
+<defs>
+ <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#213246"/></pattern>
+ <linearGradient id="panel" x2="1" y2="1"><stop stop-color="#17334b"/><stop offset="1" stop-color="#132337"/></linearGradient>
+ <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#6ce6cb" stroke-width="1.7"/></marker>
+ <marker id="back" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#b9a3ff" stroke-width="1.7"/></marker>
+ <style>
+ text {font-family:DejaVu Sans,Arial,sans-serif;fill:#eaf2fc}
+ .muted{fill:#aec0d3;font-size:16px}.mono{font-family:DejaVu Sans Mono,monospace;font-size:15px;fill:#d3ece8}
+ .title{font-size:23px;font-weight:bold}.label{font-size:15px;fill:#6ce6cb;font-weight:bold;letter-spacing:1px}
+ .box{fill:#111f31;stroke:#35485e;stroke-width:1.3}.wire{fill:none;stroke:#6ce6cb;stroke-width:2;marker-end:url(#arrow)}
+ </style>
+</defs>
+<rect width="1200" height="1020" rx="24" fill="#091320"/>
+<rect width="1200" height="1020" rx="24" fill="url(#grid)"/>
+<text x="40" y="49" class="label">AUTOTWIN / HOW IT WORKS</text>
+<text x="40" y="89" font-size="32" font-weight="bold">From an event log to a model you can inspect.</text>
+<text x="40" y="119" class="muted">The agent chooses the next step; tools execute it and return results.</text>
+
+<!-- Conversation and deliverables -->
+<rect x="40" y="166" width="250" height="172" rx="16" class="box"/>
+<text x="62" y="197" class="label">01 / YOU</text>
+<text x="62" y="235" class="title">Log + objective</text>
+<text x="62" y="268" class="muted">XES events / questions</text>
+<text x="62" y="295" class="muted">Constraints / feedback</text>
+<path d="M290 235H375" class="wire"/><text x="302" y="219" class="muted">ask</text>
+<rect x="380" y="166" width="440" height="172" rx="16" fill="url(#panel)" stroke="#6ce6cb" stroke-width="1.6"/>
+<text x="403" y="197" class="label">02 / TERMINAL AGENT</text>
+<text x="403" y="235" class="title">Inspect → reason → act → review</text>
+<text x="403" y="269" class="muted">Deep Agents CLI · model via OpenRouter</text>
+<text x="403" y="297" class="muted">Skills guide work; the plan can change.</text>
+<path d="M820 235H905" class="wire"/><text x="831" y="219" class="muted">report</text>
+<rect x="910" y="166" width="250" height="172" rx="16" class="box"/>
+<text x="932" y="197" class="label">03 / YOU REVIEW</text>
+<text x="932" y="235" class="title">Model + evidence</text>
+<text x="932" y="268" class="muted">BPMN + parameters</text>
+<text x="932" y="295" class="muted">Fidelity report + replay</text>
+
+<!-- Skills stay above the execution boundary -->
+<rect x="40" y="366" width="1120" height="64" rx="12" fill="#142039" stroke="#46446b"/>
+<text x="62" y="405" fill="#c9b8ff" font-size="16" font-weight="bold">SKILLS</text>
+<text x="156" y="405" font-size="17">discover-operation</text><text x="364" y="405" font-size="17">generate-environment</text>
+<text x="612" y="405" font-size="17">stage1</text><text x="709" y="405" font-size="17">stage2</text>
+<text x="815" y="405" class="muted">Instructions, not a fixed pipeline</text>
+
+<!-- Two explicit directions: command and observation -->
+<path d="M456 338V356H28V486H380V506" class="wire"/>
+<text x="51" y="473" class="label">CALL A TOOL / RUN CODE</text>
+<path d="M825 506V486H1174V350H748V338" fill="none" stroke="#b9a3ff" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#back)"/>
+<text x="860" y="473" font-size="15" fill="#c9b8ff">RETURN RESULTS / ERRORS</text>
+
+<rect x="40" y="510" width="1120" height="344" rx="18" fill="#0c1b28" stroke="#416078" stroke-width="1.5"/>
+<text x="62" y="545" class="label">EXECUTION / ISOLATED DOCKER WORKER</text>
+<text x="644" y="545" class="muted">One per tool call · no network or API keys</text>
+
+<rect x="60" y="567" width="345" height="163" rx="12" class="box"/>
+<text x="80" y="597" font-size="19" font-weight="bold">Understand the log</text>
+<text x="80" y="630" class="mono">inspect_log_scope</text>
+<text x="80" y="657" class="mono">discover_process</text>
+<text x="80" y="684" class="mono">prepare_environment</text>
+<text x="80" y="711" class="muted">Coverage, paths, time partitions</text>
+
+<rect x="428" y="567" width="345" height="163" rx="12" class="box"/>
+<text x="448" y="597" font-size="19" font-weight="bold">Build and investigate</text>
+<text x="448" y="630" class="mono">build_environment</text>
+<text x="448" y="657" class="mono">inspect_environment</text>
+<text x="448" y="684" class="mono">revise_environment</text>
+<text x="448" y="711" class="muted">PM4Py + PIX + Prosimos</text>
+
+<rect x="796" y="567" width="345" height="163" rx="12" class="box"/>
+<text x="816" y="597" font-size="19" font-weight="bold">Check and show</text>
+<text x="816" y="630" class="mono">evaluate_environment</text>
+<text x="816" y="657" class="mono">compare_evaluations</text>
+<text x="816" y="684" class="mono">export_view</text>
+<text x="816" y="711" class="muted">Log distances + Three.js replay</text>
+
+<path d="M62 751H1138" stroke="#35485e"/>
+<text x="62" y="781" font-size="17" font-weight="bold">Also: write and run Python experiments</text>
+<text x="62" y="815" class="mono">execute · read_file · write_file · edit_file · delete · ls · glob · grep</text>
+
+<!-- Storage / control plane: no false pipeline arrows -->
+<rect x="40" y="876" width="548" height="100" rx="12" class="box"/>
+<text x="62" y="905" class="label">FILES MOUNTED INTO THE WORKER</text>
+<text x="62" y="935" class="muted">Read-only: input data OR a selected checkpoint</text>
+<text x="62" y="959" class="muted">Writable: this conversation's workspace; files persist</text>
+<rect x="610" y="876" width="550" height="100" rx="12" class="box"/>
+<text x="632" y="905" class="label">CONTROLLER TOOLS / OUTSIDE THE WORKER</text>
+<text x="632" y="935" class="mono">task · ask_user · write_todos · compact_conversation</text>
+<text x="632" y="959" class="mono">fetch_url · web_search (requires Tavily key)</text>
+<text x="40" y="1003" font-size="13" fill="#aec0d3">Delegated agents share the same sandbox boundaries. Results inform the next action; passing a metric does not certify a business model.</text>
+</svg>

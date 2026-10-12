@@ -17,6 +17,43 @@ Use it from the terminal: ask a question, let the agent inspect the data and run
 
 The first stage reconstructs and checks the process. The next stage uses that model to investigate changes. Costs, service targets, staffing rules, and what can actually change need to come from you; the log does not establish them.
 
+## How it works
+
+[![AutoTwin architecture: a terminal agent calls process tools and writes code in isolated Docker workers, reviews returned evidence, and produces a model, report, and replay.](docs/images/architecture.gif)](docs/images/architecture.svg)
+
+[Open the full-size, static diagram](docs/images/architecture.svg). The animation illustrates tool calls and returned evidence; it is not a recording of a run.
+
+<details>
+<summary><strong>Tools available to the agent</strong></summary>
+
+| Tool | What it does |
+|---|---|
+| `inspect_log_scope` | Check full-log coverage, categories, and case dates before choosing a scope. |
+| `discover_process` | Inspect activity paths, variants, and resource handovers in a disclosed log prefix. |
+| `prepare_environment` | Create chronological training, validation, and test partitions; record exclusions. |
+| `build_environment` | Discover the process, fit simulation parameters, and check execution. |
+| `inspect_environment` | Examine recorded and simulated paths, repetitions, and timing. |
+| `revise_environment` | Build a separate candidate with revised discovery settings and a stated reason. |
+| `evaluate_environment` | Compare the model and simulated logs with recorded cases across selected seeds. |
+| `compare_evaluations` | Compare results and flag incompatible evaluation settings. |
+| `export_view` | Export an offline Three.js replay with evaluation summaries. |
+
+The agent can also **write its own analysis code** using `execute`, and inspect or change workspace files through `read_file`, `write_file`, `edit_file`, `delete`, `ls`, `glob`, and `grep`.
+
+Outside the worker, `task` delegates work to subagents; `ask_user` requests input; `write_todos` tracks work; and `compact_conversation` manages long conversations. Research uses `fetch_url` and, with a `TAVILY_API_KEY`, `web_search`. Subagents use the same sandbox boundaries.
+
+Skills guide discovery, environment generation, Stage 1, and Stage 2. The agent chooses which tools to use; the diagram's groups are capabilities, not mandatory steps.
+
+The diagram follows [C4's guidance on labelled relationships](https://c4model.com/diagrams/checklist) and [Anthropic's tool-and-feedback agent pattern](https://www.anthropic.com/engineering/building-effective-agents). GitHub supports the GIF preview; the SVG remains the editable, static source. Regenerate the animation with:
+
+```sh
+uv run --with cairosvg --with pillow python scripts/render_architecture.py
+```
+
+These rendering packages are only needed to update the illustration, not to run AutoTwin.
+
+</details>
+
 ## Worked example: purchasing through invoice payment
 
 We used a [published synthetic procurement log](https://zenodo.org/records/10435849): **1,000 cases, 13,290 events, and 24 activities**, covering requisitions, quotations, delivery, and payment. This is a generated research dataset, not a company's production history.
