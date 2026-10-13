@@ -74,7 +74,7 @@ The distinction matters: early-ending cases make the overall average look faster
 
 **Proposed experiment:** use structured supplier quotes or a comparison template, modeled as a 20% reduction in quotation-comparison working duration. Keep approvals, staffing, schedules, and routing unchanged.
 
-**Result so far:** diagnosis and an experiment proposal. The 20% saving is an assumption to test, not an achieved improvement. No intervention was run in this example.
+**Follow-up:** AutoTwin later tested this assumption in simulation. Across 30 pairs of 500 cases, modeled mean time to payment fell from 79.6 to 70.5 hours. The estimated reduction was 9.1 hours (95% simulation interval: 5.0–13.2 hours). These are simulated results on a synthetic process, not demonstrated business savings. See **Test an improvement** below to run the same kind of experiment.
 
 ## Clone and run
 
@@ -157,9 +157,23 @@ For an existing local frozen checkpoint, start a fresh conversation with
 not bundled with the repository. Rebuild the worker after updating source:
 `docker build -t autotwin-worker:local .`.
 
-The first completed CLI trial tested this change on our synthetic procurement
-checkpoint: 30 pairs of 500 cases. Modeled mean arrival-to-payment time fell from
-79.6 to 70.5 hours (estimated reduction 9.1 hours; 95% simulation interval
-5.0–13.2 hours). This tests the scenario workflow. It does not establish real-world
-savings or validate the checkpoint for operational decisions. No costs were
-supplied, so no financial benefit is claimed.
+The worked example above tests this scenario workflow. It does not validate the
+checkpoint for operational decisions. No costs were supplied, so no financial
+benefit is claimed.
+
+## Development checks
+
+Run the local checks without an API key or downloaded datasets:
+
+```sh
+for check in temporal_selection_check.py model_tools_check.py calibration_build_check.py workspace_check.py scenario_check.py; do
+  uv run --frozen python "$check" || exit 1
+done
+```
+
+`uv run --frozen python sandbox_check.py` additionally checks real Docker isolation.
+It requires the worker image, example dataset and local `p2p_heuristics_v1`
+checkpoint; that checkpoint is not shipped with a clone.
+
+The web app is planned, not implemented. The [frontend brief](docs/apromore-reference.md)
+separates existing capabilities from proposed screens and human checkpoints.
