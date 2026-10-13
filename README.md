@@ -84,10 +84,15 @@ You need **Python 3.12**, [uv](https://docs.astral.sh/uv/getting-started/install
 git clone https://github.com/debsagar/AutoTwin.git
 cd AutoTwin
 uv sync --frozen
+mkdir -p .dcode
+cp -n .deepagents/config.example.toml .dcode/config.toml
 export OPENROUTER_API_KEY="your-key"
 docker build -t autotwin-worker:local .
 uv run python main.py
 ```
+
+CLI preferences and conversation history stay local under `.dcode/`, outside Git.
+The copy command preserves an existing configuration.
 
 The default model is `openrouter:openai/gpt-5.6-luna`. To choose another available model, append `--model openrouter:<model-id>` to the launch command.
 

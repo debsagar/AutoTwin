@@ -1,0 +1,7 @@
+# Copy to .dcode/config.toml for a new installation.
+# Model preferences and reasoning settings belong in that local file.
+[startup]
+mode = "manual"
+
+[update]
+auto_update = false

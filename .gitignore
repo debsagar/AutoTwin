@@ -4,8 +4,7 @@ __pycache__/
 .env.*
 data/
 runs/
-.dcode/*
-!.dcode/config.toml
+.dcode/
 
 output/
 
