@@ -1,6 +1,6 @@
 ---
 name: stage2
-description: Diagnose a selected frozen process simulation and propose business-process improvements and scenario experiments. Use for Stage 2 or explicit process-improvement requests, not historical model calibration.
+description: Diagnose a selected process simulation, propose improvements, and run requested before-and-after scenario experiments. Use for Stage 2 or explicit process-improvement requests, not historical model calibration.
 ---
 
 # Stage 2 — process improvement
@@ -8,7 +8,9 @@ description: Diagnose a selected frozen process simulation and propose business-
 Use the user's objective and constraints. A selected checkpoint is available as
 `<workspace>/baseline/`, read-only. Read its README, selection and evidence before
 choosing the model. Keep new analysis in this workspace; preserve the baseline.
-If no checkpoint is attached, explain how to start with `--checkpoint NAME`.
+A selected Stage 1 candidate in the current workspace can also be used: the
+comparison tool preserves it and creates separate baseline/scenario copies. If
+neither is available, ask which model to use or explain `--checkpoint NAME`.
 
 The first task is diagnosis and an experiment proposal unless the user requests
 scenario execution and supplies or accepts the necessary business assumptions.
@@ -45,3 +47,21 @@ Established starting points, not mandatory algorithms:
   https://github.com/AutomatedProcessImprovement/optimos_v2
 - Simulation inputs and units:
   https://github.com/AutomatedProcessImprovement/Prosimos
+
+## Run a scenario when requested
+
+`compare_scenario` handles task-duration scaling and resource headcount changes
+on an existing workspace model bundle (including the mounted baseline). Inspect
+its task labels and resource IDs before choosing changes. Supply the objective,
+intervention assumptions, case count, repeated seeds and start date. Define a
+successful-case activity where outcomes differ. Supply SLA/costs only when the
+user provides or explicitly accepts them; inferred library defaults are not
+business facts. Missing costs need not block a timing-only experiment.
+
+The tool preserves both model copies, saves shared arrival schedules and run
+logs, and exports `experiments/<name>/comparison.html` with `report.json`.
+It checks case completion and reports uncertainty across repeated runs; it does
+not certify the underlying model or choose the best business action. Read and
+interpret the actual results, including outcome rates and uncertainty. Link the
+results page in the final answer. Use workspace code for other justified changes;
+this tool is a convenience, not the limit of your capabilities.

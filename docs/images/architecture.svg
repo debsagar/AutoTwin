@@ -74,7 +74,7 @@
 <text x="816" y="630" class="mono">evaluate_environment</text>
 <text x="816" y="657" class="mono">compare_evaluations</text>
 <text x="816" y="684" class="mono">export_view</text>
-<text x="816" y="711" class="muted">Log distances + Three.js replay</text>
+<text x="816" y="711" class="mono">compare_scenario</text>
 
 <path d="M62 751H1138" stroke="#35485e"/>
 <text x="62" y="781" font-size="17" font-weight="bold">Also: write and run Python experiments</text>

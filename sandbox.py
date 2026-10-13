@@ -13,7 +13,7 @@ FILES = {'read_file': 'read', 'write_file': 'write', 'edit_file': 'edit',
          'delete': 'delete', 'ls': 'ls', 'glob': 'glob', 'grep': 'grep'}
 PROCESS = {'discover_process', 'inspect_log_scope', 'prepare_environment', 'build_environment',
            'inspect_environment', 'revise_environment', 'evaluate_environment',
-           'compare_evaluations', 'export_view'}
+           'compare_evaluations', 'export_view', 'compare_scenario'}
 
 
 def call(workspace, name, args, timeout=1800):

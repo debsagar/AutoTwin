@@ -179,6 +179,27 @@ def export_view(name: str) -> dict:
     return export(name)
 
 
+def compare_scenario(source: str, name: str, objective: str, assumption: str,
+                     changes: list[dict], cases: int, seeds: list[int], starting_at: str,
+                     success_activity: str | None = None, sla_hours: float | None = None,
+                     costs: dict | None = None) -> dict:
+    """Run a Stage 2 comparison and export an offline results page. Source is a
+    model bundle path inside this workspace (including baseline/). Preserve source.
+    Changes: {"kind":"task_duration","activity":"exact label","factor":0.8}
+    or {"kind":"resource_amount","resource_id":"exact ID","amount":2}.
+    Supply 3..50 seeds, 1..5000 cases, timezone-aware starting_at, objective and
+    explicit intervention assumptions. Optional success_activity is a case outcome
+    proxy; SLA hours apply to those cases if supplied, otherwise all cases.
+    Optional costs require currency, hourly_rates for EVERY original resource ID,
+    and scenario_fixed_cost. Never use inferred cost defaults as company facts.
+    Shared arrivals, independent process draws, paired replicate uncertainty.
+    Repeated experiment names are rejected; no automatic recommendation or pass.
+    """
+    from scenarios import compare_scenario as compare
+    return compare(source, name, objective, assumption, changes, cases, seeds,
+                   starting_at, success_activity, sla_hours, costs)
+
+
 def install_runtime_policy():
     """Local dcode compatibility override: product skills only, native approvals.
 
@@ -239,5 +260,5 @@ async def extension(api):
     api.register_middleware(middleware())
 
     for tool in (discover_process, inspect_log_scope, prepare_environment, build_environment,
-                 inspect_environment, revise_environment, evaluate_environment, compare_evaluations, export_view):
+                 inspect_environment, revise_environment, evaluate_environment, compare_evaluations, export_view, compare_scenario):
         api.register_tool(tool)

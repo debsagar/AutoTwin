@@ -53,3 +53,24 @@ This is a proposed synthetic validation design, consistent with purpose-specific
 ## Finite first task
 
 Deliver one concise diagnosis, at most three conditional proposals and one experiment specification. Identify missing assumptions and explain the independent synthetic check. Stop before scenario implementation, inventing costs or claiming validated improvement. This follows the frozen assignment; a general optimizer, redesign framework and unrestricted recalibration are outside this task.
+
+## Implemented comparison tool
+
+`compare_scenario` copies a selected workspace model, applies explicit duration
+multipliers or resource quantities, and runs repeated baseline/scenario pairs.
+Arrival offsets are generated once per pair and shared; process draws use separate
+seeds. Cycle time starts at simulated arrival, including the first task queue.
+Every case must execute the end event and leave no pending tokens. Optional
+successful-case and SLA definitions are explicit. Student-t intervals summarize
+paired replicate differences, not model uncertainty or causal validity.
+
+Costs require user-supplied hourly rates for every resource, a currency and a
+scenario implementation cost. The calculation prices scheduled staff hours,
+including idle time, to the later completion of each pair. This compares capacity
+budgets over a common period; it does not monetize faster cases or infer ROI.
+
+The tool writes original and revised model copies, arrival schedules, per-run
+logs/statistics, `report.json` and standalone `comparison.html`. The Stage 2 skill
+uses it when execution is requested. It remains free to write code for other
+interventions. A fixed duration reduction is an assumed mechanism, not proof that
+automation achieves it.

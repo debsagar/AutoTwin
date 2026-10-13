@@ -37,6 +37,7 @@ The first stage reconstructs and checks the process. The next stage uses that mo
 | `evaluate_environment` | Compare the model and simulated logs with recorded cases across selected seeds. |
 | `compare_evaluations` | Compare results and flag incompatible evaluation settings. |
 | `export_view` | Export an offline Three.js replay with evaluation summaries. |
+| `compare_scenario` | Test duration or headcount changes against a preserved baseline; export before/after results with uncertainty. |
 
 The agent can also **write its own analysis code** using `execute`, and inspect or change workspace files through `read_file`, `write_file`, `edit_file`, `delete`, `ls`, `glob`, and `grep`.
 
@@ -128,3 +129,32 @@ Diagnose this baseline and propose one improvement experiment. Explain the evide
 Inputs remain read-only; generated files stay in the conversation's workspace. Rebuild the Docker image after changing tools or skills. Data, runs, local sessions, and credentials are excluded from Git.
 
 For the next stage's methodology, see [the process-improvement workflow](docs/stage2-workflow.md).
+
+## Test an improvement
+
+After Stage 1, stay in the same CLI conversation and enter:
+
+```text
+/skill:stage2 Test a hypothetical 20% reduction in working duration for
+Create Quotation comparison Map. Keep quality, routing and staffing unchanged.
+Use Pay invoice as the successful outcome. Run 30 pairs of 500 cases and
+show the before-and-after results. Do not assume costs or an SLA.
+```
+
+Use the exact activity names in your model. The agent selects the source model,
+records assumptions, runs the comparison and writes
+`experiments/<name>/comparison.html` plus the supporting report and run logs.
+The page opens offline in a browser. It shows completion times, successful
+outcomes, uncertainty, and optional SLA and staffing-budget comparisons.
+
+For an existing local frozen checkpoint, start a fresh conversation with
+`uv run python main.py --checkpoint NAME` first. Checkpoints are local artifacts,
+not bundled with the repository. Rebuild the worker after updating source:
+`docker build -t autotwin-worker:local .`.
+
+The first completed CLI trial tested this change on our synthetic procurement
+checkpoint: 30 pairs of 500 cases. Modeled mean arrival-to-payment time fell from
+79.6 to 70.5 hours (estimated reduction 9.1 hours; 95% simulation interval
+5.0–13.2 hours). This tests the scenario workflow. It does not establish real-world
+savings or validate the checkpoint for operational decisions. No costs were
+supplied, so no financial benefit is claimed.
