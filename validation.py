@@ -219,9 +219,11 @@ def evaluate_environment(name: str, split: str = 'validation', metrics: list[str
             if process.returncode:
                 raise RuntimeError(f'Seed {seed} failed; see {run / "simulation.log"}.')
             generated = _read(run / 'simulation.csv')
-            if generated.case_id.nunique() != cases or 'start_time' not in generated or generated.start_time.isna().any():
+            # Prosimos writes no rows for a case whose path skips every task, so such cases show up as missing IDs.
+            if generated.case_id.nunique() > cases or 'start_time' not in generated or generated.start_time.isna().any():
                 raise ValueError(f'Seed {seed} generated incomplete cases or starts.')
             report['replications'].append({'seed': seed, 'termination': termination, 'cases': int(generated.case_id.nunique()),
+                                           'empty_cases': cases - int(generated.case_id.nunique()),
                                            'events': len(generated),
                                            'simulation_sha256': _digest(run / 'simulation.csv'),
                                            'completion_range': [generated.end_time.min().isoformat(), generated.end_time.max().isoformat()], 'metrics': _distances(observed, generated, metrics),

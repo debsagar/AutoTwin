@@ -1,0 +1,363 @@
+Running Simulation for Solution # 0 (ID: 20_40_7_1) ...
+Simulation Full Time:    0:Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Running Simulation for Solution # 0 (ID: 20_40_7_1) ...
+Simulation Full Time:    0:00:10.198667
+Simulation Average Time: 0:00:00.679911
+Running Simulation for Solution # 0 (ID: 20_40_13_1) ...
+Simulation Full Time:    0:00:07.336746
+Simulation Average Time: 0:00:00.489116
+Running Simulation for Solution # 0 (ID: 20_40_14_1) ...
+Simulation Full Time:    0:00:06.516451
+Simulation Average Time: 0:00:00.434430
+Running Simulation for Solution # 0 (ID: 20_68_7_1) ...
+Simulation Full Time:    0:00:06.247201
+Simulation Average Time: 0:00:00.416480
+Running Simulation for Solution # 0 (ID: 20_40_7_2) ...
+Simulation Full Time:    0:00:06.438238
+Simulation Average Time: 0:00:00.429216
+Running Simulation for Solution # 0 (ID: 39_40_7_1) ...
+Simulation Full Time:    0:00:06.520426
+Simulation Average Time: 0:00:00.434695
+Running Simulation for Solution # 0 (ID: 40_40_7_1) ...
+Simulation Full Time:    0:00:07.078659
+Simulation Average Time: 0:00:00.471911
+Running Simulation for Solution # 0 (ID: 1_40_7_1) ...
+Simulation Full Time:    0:00:06.730549
+Simulation Average Time: 0:00:00.448703
+Running Simulation for Solution # 0 (ID: 20_3_7_1) ...
+Simulation Full Time:    0:00:06.770645
+Simulation Average Time: 0:00:00.451376
+Running Simulation for Solution # 0 (ID: 20_2_7_1) ...
+Simulation Full Time:    0:00:06.995069
+Simulation Average Time: 0:00:00.466338
+Running Simulation for Solution # 0 (ID: 20_40_1_1) ...
+Simulation Full Time:    0:00:06.512307
+Simulation Average Time: 0:00:00.434154
+Running Simulation for Solution # 0 (ID: 14_40_13_1) ...
+Simulation Full Time:    0:00:06.255421
+Simulation Average Time: 0:00:00.417028
+Running Simulation for Solution # 0 (ID: 20_34_13_1) ...
+Simulation Full Time:    0:00:06.249109
+Simulation Average Time: 0:00:00.416607
+Running Simulation for Solution # 0 (ID: 1_59_7_1) ...
+Simulation Full Time:    0:00:06.685097
+Simulation Average Time: 0:00:00.445673
+Running Simulation for Solution # 0 (ID: 20_46_1_1) ...
+Simulation Full Time:    0:00:06.961261
+Simulation Average Time: 0:00:00.464084
+Running Simulation for Solution # 0 (ID: 39_21_7_1) ...
+Simulation Full Time:    0:00:07.099065
+Simulation Average Time: 0:00:00.473271
+Running Simulation for Solution # 0 (ID: 26_40_1_1) ...
+Simulation Full Time:    0:00:06.576899
+Simulation Average Time: 0:00:00.438460
+Running Simulation for Solution # 0 (ID: 20_39_7_1) ...
+Simulation Full Time:    0:00:06.418249
+Simulation Average Time: 0:00:00.427883
+Running Simulation for Solution # 0 (ID: 19_40_7_1) ...
+Simulation Full Time:    0:00:06.288810
+Simulation Average Time: 0:00:00.419254
+Running Simulation for Solution # 0 (ID: 20_41_7_1) ...
+Simulation Full Time:    0:00:07.133105
+Simulation Average Time: 0:00:00.475540
+bpi_challenge_2012 hc_flex_first20 None done in 140s
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Running Simulation for Solution # 0 (ID: 20_40_7_1) ...
+Simulation Full Time:    0:00:07.101504
+Simulation Average Time: 0:00:00.473434
+Running Simulation for Solution # 0 (ID: 18_9_33_16) ...
+Simulation Full Time:    0:00:06.238335
+Simulation Average Time: 0:00:00.415889
+Running Simulation for Solution # 0 (ID: 64_58_61_49) ...
+Simulation Full Time:    0:00:06.805799
+Simulation Average Time: 0:00:00.453720
+Running Simulation for Solution # 0 (ID: 27_13_63_4) ...
+Simulation Full Time:    0:00:06.457577
+Simulation Average Time: 0:00:00.430505
+Running Simulation for Solution # 0 (ID: 50_56_1_58) ...
+Simulation Full Time:    0:00:06.557906
+Simulation Average Time: 0:00:00.437194
+Running Simulation for Solution # 0 (ID: 35_30_14_41) ...
+Simulation Full Time:    0:00:06.382488
+Simulation Average Time: 0:00:00.425499
+Running Simulation for Solution # 0 (ID: 4_3_4_2) ...
+Simulation Full Time:    0:00:06.831396
+Simulation Average Time: 0:00:00.455426
+Running Simulation for Solution # 0 (ID: 49_28_55_4) ...
+Simulation Full Time:    0:00:07.324447
+Simulation Average Time: 0:00:00.488296
+Running Simulation for Solution # 0 (ID: 68_29_57_64) ...
+Simulation Full Time:    0:00:06.416561
+Simulation Average Time: 0:00:00.427771
+Running Simulation for Solution # 0 (ID: 30_45_30_29) ...
+Simulation Full Time:    0:00:06.562266
+Simulation Average Time: 0:00:00.437484
+Running Simulation for Solution # 0 (ID: 59_38_3_54) ...
+Simulation Full Time:    0:00:07.210616
+Simulation Average Time: 0:00:00.480708
+Running Simulation for Solution # 0 (ID: 13_24_38_16) ...
+Simulation Full Time:    0:00:06.374472
+Simulation Average Time: 0:00:00.424965
+Running Simulation for Solution # 0 (ID: 43_65_55_65) ...
+Simulation Full Time:    0:00:07.268594
+Simulation Average Time: 0:00:00.484573
+Running Simulation for Solution # 0 (ID: 25_39_37_64) ...
+Simulation Full Time:    0:00:06.642323
+Simulation Average Time: 0:00:00.442822
+Running Simulation for Solution # 0 (ID: 65_51_5_62) ...
+Simulation Full Time:    0:00:06.569794
+Simulation Average Time: 0:00:00.437986
+Running Simulation for Solution # 0 (ID: 32_52_54_23) ...
+Simulation Full Time:    0:00:06.607841
+Simulation Average Time: 0:00:00.440523
+Running Simulation for Solution # 0 (ID: 47_48_12_57) ...
+Simulation Full Time:    0:00:06.259869
+Simulation Average Time: 0:00:00.417325
+Running Simulation for Solution # 0 (ID: 66_14_21_67) ...
+Simulation Full Time:    0:00:06.471910
+Simulation Average Time: 0:00:00.431461
+Running Simulation for Solution # 0 (ID: 51_48_63_4) ...
+Simulation Full Time:    0:00:06.824390
+Simulation Average Time: 0:00:00.454959
+Running Simulation for Solution # 0 (ID: 61_6_40_51) ...
+Simulation Full Time:    0:00:06.295579
+Simulation Average Time: 0:00:00.419705
+bpi_challenge_2012 blind 1 done in 136s
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xshare:auto
+Running Simulation for Solution # 0 (ID: 20_40_7_1) ...
+Simulation Full Time:    0:00:07.012091
+Simulation Average Time: 0:00:00.467473
+Running Simulation for Solution # 0 (ID: 6_40_7_1) ...
+Simulation Full Time:    0:00:06.500988
+Simulation Average Time: 0:00:00.433399
+Running Simulation for Solution # 0 (ID: 20_40_12_1) ...
+Simulation Full Time:    0:00:06.535718
+Simulation Average Time: 0:00:00.435715
+Running Simulation for Solution # 0 (ID: 6_61_7_1) ...
+Simulation Full Time:    0:00:05.861864
+Simulation Average Time: 0:00:00.390791
+Running Simulation for Solution # 0 (ID: 20_40_11_1) ...
+Simulation Full Time:    0:00:07.000855
+Simulation Average Time: 0:00:00.466724
+Running Simulation for Solution # 0 (ID: 32_40_7_1) ...
+Simulation Full Time:    0:00:09.213045
+Simulation Average Time: 0:00:00.614203
+Running Simulation for Solution # 0 (ID: 32_48_7_1) ...
+Simulation Full Time:    0:00:11.377771
+Simulation Average Time: 0:00:00.758518
+Running Simulation for Solution # 0 (ID: 2_40_7_1) ...
+Simulation Full Time:    0:00:12.936865
+Simulation Average Time: 0:00:00.862458
+Running Simulation for Solution # 0 (ID: 2_40_13_1) ...
+Simulation Full Time:    0:00:11.405390
+Simulation Average Time: 0:00:00.760359
+Running Simulation for Solution # 0 (ID: 32_55_7_1) ...
+Simulation Full Time:    0:00:09.867804
+Simulation Average Time: 0:00:00.657854
+Running Simulation for Solution # 0 (ID: 20_40_10_1) ...
+Simulation Full Time:    0:00:06.620739
+Simulation Average Time: 0:00:00.441383
+Running Simulation for Solution # 0 (ID: 20_40_7_2) ...
+Simulation Full Time:    0:00:07.254097
+Simulation Average Time: 0:00:00.483606
+Running Simulation for Solution # 0 (ID: 32_40_11_1) ...
+Simulation Full Time:    0:00:07.247175
+Simulation Average Time: 0:00:00.483145
+Running Simulation for Solution # 0 (ID: 2_40_14_1) ...
+Simulation Full Time:    0:00:08.519430
+Simulation Average Time: 0:00:00.567962
+Running Simulation for Solution # 0 (ID: 2_40_11_1) ...
+Simulation Full Time:    0:00:09.359433
+Simulation Average Time: 0:00:00.623962
+Running Simulation for Solution # 0 (ID: 20_40_13_1) ...
+Simulation Full Time:    0:00:08.155738
+Simulation Average Time: 0:00:00.543716
+Running Simulation for Solution # 0 (ID: 2_40_7_2) ...
+Simulation Full Time:    0:00:06.234236
+Simulation Average Time: 0:00:00.415616
+Running Simulation for Solution # 0 (ID: 3_40_7_2) ...
+Simulation Full Time:    0:00:07.441614
+Simulation Average Time: 0:00:00.496108
+Running Simulation for Solution # 0 (ID: 3_40_7_1) ...
+Simulation Full Time:    0:00:07.083411
+Simulation Average Time: 0:00:00.472227
+Running Simulation for Solution # 0 (ID: 2_44_7_2) ...
+Simulation Full Time:    0:00:06.075389
+Simulation Average Time: 0:00:00.405026
+bpi_challenge_2012 one_pool 2 done in 165s

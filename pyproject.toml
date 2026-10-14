@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "deepagents-code[openrouter]==0.1.83",
+    "extraneous-activity-delays==2.3.0",
     "log-distance-measures==2.2.0",
     "pix-framework==0.15.0",
     "pm4py==2.7.23.8",

@@ -1,0 +1,18 @@
+
+purchasing_example: start (20, 14, 5, 3, 3, 2) cost 587635 time 183421
+policy                 runs   cost saved, time no worse  time saved, cost no higher   trade-off area vs published
+published best set        1                         75%                         17%                          100%
+hc_strict_first20         1                         37%                          9%                           42%
+hc_flex_first20           1                         41%                          8%                           46%
+one_pool                  3                 28% (17-35)                  14% (9-17)                   33% (23-38)
+blind                     4                    0% (0-0)                    1% (0-2)                      0% (0-1)
+start only                1                          0%                          0%                            0%
+
+bpi_challenge_2012: start (20, 40, 7, 1) cost 598245 time 3305
+policy                 runs   cost saved, time no worse  time saved, cost no higher   trade-off area vs published
+published best set        1                         87%                          0%                          100%
+hc_strict_first20         1                         28%                          0%                           51%
+hc_flex_first20           1                         28%                          1%                           51%
+one_pool                  3                 43% (26-72)                    0% (0-1)                   49% (29-82)
+blind                     3                   7% (0-20)                    0% (0-1)                    28% (1-61)
+start only                1                          0%                          0%                            0%

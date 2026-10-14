@@ -93,16 +93,18 @@ def inspect_log_scope(path: str, case_attribute: str = "Item Category",
 
 def prepare_environment(path: str, name: str, partitions: dict,
                         max_cases: int = 5000, case_attribute: str = "Item Category",
-                        case_value: str | None = None) -> dict:
+                        case_value: str | None = None, selection: str = "contained") -> dict:
     """Prepare explicit nonoverlapping time partitions, e.g.
     {"train": {"start": "2018-01-01", "end": "2018-05-01"},
      "validation": {"start": "2018-05-01", "end": "2018-09-01"}}.
-    The caller chooses windows and cohort. Cases must fit wholly inside a window;
-    exclusions are counted. max_cases rejects oversized selections, never samples.
+    The caller chooses windows and cohort. selection="contained" keeps cases that fit
+    wholly inside a window (long cases near window ends are dropped, which thins workload
+    and shortens durations); selection="started" assigns each full case to the window
+    where it starts. Exclusions are counted. max_cases rejects oversized selections, never samples.
     Writes evidence only. For missing starts, explicitly choose and disclose estimation at build.
     """
     from environment import prepare_environment as prepare
-    return prepare(path, name, partitions, max_cases, case_attribute, case_value)
+    return prepare(path, name, partitions, max_cases, case_attribute, case_value, selection)
 
 
 def build_environment(name: str, estimate_missing_starts: bool = False,
@@ -114,7 +116,13 @@ def build_environment(name: str, estimate_missing_starts: bool = False,
     ("discovery", "equiprobable", or "token_replay", default "discovery"), arrival_filter_outliers
     (bool, default True, matching PIX; built-in interarrival outlier filtering). Filtering
     can collapse a batch-heavy log to zero interarrival time; inspect the fitted
-    distribution before accepting it. token_replay counts complete PM4Py training
+    distribution before accepting it. calendar_type ("differentiated_by_resource" default,
+    "differentiated_by_pool", or "undifferentiated") chooses PIX availability calendars:
+    one per resource, one per pool, or one shared. PIX only keeps weekday-hours in which
+    a resource has a recorded start or end, so low-volume resources can lose working hours
+    and get durations fitted against the shorter calendar; compare calendar hours with the
+    log and try pool or undifferentiated when they have holes. An undifferentiated calendar
+    also applies to NOT_SET external slots. token_replay counts complete PM4Py training
     replays, including silent loop exits, and rejects incomplete replay. Equally likely routes
     are an explicit alternative assumption, not learned probabilities.
     Heuristics discovery permits non-block-structured models; unsound nets are rejected.
@@ -155,7 +163,8 @@ def revise_environment(source: str, name: str, reason: str, settings: dict) -> d
     evidence-based reason and supported discovery settings. Source artifacts are
     preserved; evaluate the candidate with the same validation experiment. Settings
     are discovery_method (inductive or heuristics), noise_threshold (0..1; inductive only), gateway_method (discovery, equiprobable, or token_replay),
-    and arrival_filter_outliers (bool; PIX built-in filtering).
+    arrival_filter_outliers (bool; PIX built-in filtering), and calendar_type
+    (differentiated_by_resource, differentiated_by_pool, or undifferentiated; see build_environment).
     Omitted settings inherit the source settings.
     """
     from model_tools import revise_environment as revise

@@ -9,12 +9,13 @@ import environment
 
 
 def main():
-    assert environment._discovery_settings() == {'discovery_method': 'inductive', 'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': True}
+    assert environment._discovery_settings() == {'discovery_method': 'inductive', 'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': True, 'calendar_type': 'differentiated_by_resource'}
+    assert environment._discovery_settings({'calendar_type': 'undifferentiated'})['calendar_type'] == 'undifferentiated'
     assert environment._discovery_settings({'arrival_filter_outliers': False})['arrival_filter_outliers'] is False
     assert environment._discovery_settings({'noise_threshold': .1})['noise_threshold'] == .1
     for settings in ({'noise_threshold': True}, {'noise_threshold': float('nan')},
                      {'noise_threshold': -1}, {'noise_threshold': 1.1},
-                     {'discovery_method': 'invented'}, {'discovery_method': 'heuristics', 'noise_threshold': .1}, {'gateway_method': 'invented'}, {'arrival_filter_outliers': 1}, {'unknown': 1}, []):
+                     {'discovery_method': 'invented'}, {'discovery_method': 'heuristics', 'noise_threshold': .1}, {'gateway_method': 'invented'}, {'arrival_filter_outliers': 1}, {'calendar_type': '24/7'}, {'calendar_type': 'differentiated_by_resource_fuzzy'}, {'unknown': 1}, []):
         try:
             environment._discovery_settings(settings)
         except ValueError:
@@ -36,7 +37,7 @@ def main():
             environment.build_environment('fixture', True, {'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True})
             command = run.call_args.args[0]
             assert command[-2] == '1'
-            assert json.loads(command[-1]) == {'discovery_method': 'inductive', 'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True}
+            assert json.loads(command[-1]) == {'discovery_method': 'inductive', 'noise_threshold': .1, 'gateway_method': 'equiprobable', 'arrival_filter_outliers': True, 'calendar_type': 'differentiated_by_resource'}
     with tempfile.TemporaryDirectory() as folder:
         import pandas as pd
         bundle = Path(folder)
@@ -55,6 +56,12 @@ def main():
         assert report['status'] == 'simulation_check_failed'
         assert not report['simulation']['valid_trace']
         assert report['simulation']['termination']['terminated_case_count'] == 1
+        # Empty simulated cases (no rows) are counted, as evaluation does, not treated as a failed build.
+        (bundle / 'simulation_warnings.txt').unlink()
+        environment._report(bundle, manifest, frame.iloc[:195].copy(), False)
+        report = json.loads((bundle / 'report.json').read_text())
+        assert report['status'] == 'generated_unvalidated' and report['generated']['empty_cases'] == 5
+        (bundle / 'simulation_warnings.txt').write_text(warning * 2)
         import validation
         (bundle / 'validation.csv').write_text((bundle / 'train_fitted.csv').read_text())
         (bundle / 'train.csv').write_text((bundle / 'train_fitted.csv').read_text())

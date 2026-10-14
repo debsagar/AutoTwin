@@ -126,6 +126,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "deepagents-code", extra = ["openrouter"] },
+    { name = "extraneous-activity-delays" },
     { name = "log-distance-measures" },
     { name = "pix-framework" },
     { name = "pm4py" },
@@ -135,6 +136,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "deepagents-code", extras = ["openrouter"], specifier = "==0.1.83" },
+    { name = "extraneous-activity-delays", specifier = "==2.3.0" },
     { name = "log-distance-measures", specifier = "==2.2.0" },
     { name = "pix-framework", specifier = "==0.15.0" },
     { name = "pm4py", specifier = "==2.7.23.8" },
@@ -610,6 +612,22 @@ wheels = [
 ]
 
 [[package]]
+name = "extraneous-activity-delays"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "hyperopt" },
+    { name = "log-distance-measures" },
+    { name = "lxml" },
+    { name = "pix-framework" },
+    { name = "prosimos" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/97/efa0f430e1327394d1229f77d6c6bc0c1e1a7c6667bcb15169f6cc61a51b/extraneous_activity_delays-2.3.0.tar.gz", hash = "sha256:57b81efaf05d2f02af4c5ca2a88306720b89cbe62e7cfc5ff1afdb1a905ca41a", size = 20413, upload-time = "2026-09-21T14:40:47.444Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/f5/6717509452970325b69652e37a4e4f446d236af4ac86821b20412873ab73/extraneous_activity_delays-2.3.0-py3-none-any.whl", hash = "sha256:853f34bb0b6a062ba0406178f87c941001eb64579907c9825ee9cf02abf08957", size = 24952, upload-time = "2026-09-21T14:40:46.272Z" },
+]
+
+[[package]]
 name = "fastmcp"
 version = "4.0.11"
 source = { registry = "https://pypi.org/simple" }
@@ -941,6 +959,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/c4/0e5636363151a2a1795e0a77617168b9ca438e1748ec05fc9b5687f93d64/httpx2_jsfetch-1.0.tar.gz", hash = "sha256:70a0e3eabfef7cce5ad9c629f7d01ca05e418f586646f4ddf14782e4c1454c60", size = 6872, upload-time = "2026-08-07T00:13:07.492Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/43/832f631d32e4f1211caa2ba368317739fe71f0b8530e4c9d15dc454bac2a/httpx2_jsfetch-1.0-py3-none-any.whl", hash = "sha256:cb916b707601e69a07721aabc8f3f6659be3a6893bc1ff5c6f9e02241df2da32", size = 6382, upload-time = "2026-08-07T00:13:06.567Z" },
+]
+
+[[package]]
+name = "hyperopt"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cloudpickle" },
+    { name = "networkx" },
+    { name = "numpy" },
+    { name = "scipy" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/40/7701d2022ca9aa07083d2b6ac4fe57142d084a6b92c50cc924d430f1b2b8/hyperopt-0.3.0.tar.gz", hash = "sha256:d79a77522fefec13a258b97a0ccbdf40832b3270de4db08278bb07b9b934eb9a", size = 1193904, upload-time = "2026-07-24T13:39:47.515Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/e9/a570402c6df9df203b114a27e90cf5fa2a1a18ac6567c058bea7a6c89ae4/hyperopt-0.3.0-py3-none-any.whl", hash = "sha256:f2533e4363ebc0c7e9e5a5322243ece23bf62956e6e236f489080298f558404c", size = 973547, upload-time = "2026-07-24T13:39:45.563Z" },
 ]
 
 [[package]]

@@ -3,6 +3,7 @@ import csv
 import hashlib
 import json
 import math
+import os
 import random
 import re
 import subprocess
@@ -39,8 +40,13 @@ def _date(value):
 
 def _source(path):
     source = Path(path)
-    source = (ROOT / source).resolve() if not source.is_absolute() else source.resolve()
-    if not source.is_relative_to((ROOT / 'data').resolve()) or source.suffix.lower() != '.xes':
+    named = Path(os.path.normpath(ROOT / source))
+    source = named.resolve()
+    data = (ROOT / 'data').resolve()
+    # Trust boundary: tools read only files really stored under data/, so links leaving it are refused.
+    if named.is_relative_to(ROOT / 'data') and not source.is_relative_to(data):
+        raise ValueError('Symlinks pointing outside data/ are not allowed; copy the .xes file into data/ instead.')
+    if not source.is_relative_to(data) or source.suffix.lower() != '.xes':
         raise ValueError('Select an .xes file inside data/.')
     return source
 
@@ -133,13 +139,20 @@ def inspect_log_scope(path: str, case_attribute: str = 'Item Category',
 
 def prepare_environment(path: str, name: str, partitions: dict,
                         max_cases: int = 5000, case_attribute: str = 'Item Category',
-                        case_value: str | None = None) -> dict:
-    """Select whole observed cases in [start, end); date-only bounds mean UTC midnight."""
+                        case_value: str | None = None, selection: str = 'contained') -> dict:
+    """Select whole observed cases in [start, end); date-only bounds mean UTC midnight.
+
+    selection='contained' keeps cases that start and finish inside one window.
+    selection='started' keeps every case in the window where it starts, with its
+    full trace, so long cases are not dropped (later events may fall after the window).
+    """
     source = _source(path)
     if type(max_cases) is not int or not 1 <= max_cases <= 50000:
         raise ValueError('max_cases must be an integer from 1 to 50000; it is a fail guard, not a sample size.')
     if not isinstance(case_attribute, str) or not case_attribute or (case_value is not None and not isinstance(case_value, str)):
         raise ValueError('Specify a case attribute and optional category string.')
+    if selection not in ('contained', 'started'):
+        raise ValueError("selection must be 'contained' or 'started'.")
     if not isinstance(partitions, dict) or 'train' not in partitions or set(partitions) - {'train', 'validation', 'test'}:
         raise ValueError('Supply train and optional validation/test partitions with start and end timestamps.')
     windows = {}
@@ -161,7 +174,7 @@ def prepare_environment(path: str, name: str, partitions: dict,
     if bundle.exists():
         raise FileExistsError(f'{bundle} already exists; use a new name.')
     splits = {split: [] for split in windows}
-    categories, quality = Counter(), Counter()
+    categories, quality, years = Counter(), Counter(), Counter()
     excluded = Counter(dict.fromkeys(['other_category_cases', 'other_category_events', 'boundary_crossing_cases',
                                      'boundary_crossing_events', 'outside_windows_cases', 'outside_windows_events'], 0))
     selected = eligible = empty = 0
@@ -177,7 +190,8 @@ def prepare_environment(path: str, name: str, partitions: dict,
             continue
         eligible += 1
         begin, finish = _span(rows)
-        split = next((s for s, (left, right) in windows.items() if left <= begin and finish < right), None)
+        split = next((s for s, (left, right) in windows.items()
+                      if left <= begin and (finish < right if selection == 'contained' else begin < right)), None)
         if split is None:
             crossing = any(begin < boundary <= finish for window in windows.values() for boundary in window)
             excluded['boundary_crossing_cases' if crossing else 'outside_windows_cases'] += 1
@@ -192,7 +206,7 @@ def prepare_environment(path: str, name: str, partitions: dict,
         rows.sort(key=lambda r: r[4])
         quality['missing_starts'] += sum(not row[3] for row in rows)
         quality['missing_resources'] += sum(row[2] == 'NOT_SET' for row in rows)
-        quality['dates_outside_2018_2019'] += sum(_date(row[4]).year not in {2018, 2019} for row in rows)
+        years.update(_date(row[4]).year for row in rows)
         quality['adjacent_completion_ties'] += sum(a[4] == b[4] for a, b in zip(rows, rows[1:]))
         splits[split].append(rows)
     if not splits['train']:
@@ -213,7 +227,9 @@ def prepare_environment(path: str, name: str, partitions: dict,
         'scope': {'case_attribute': case_attribute, 'case_value': case_value,
                   'source_cases': sum(categories.values()), 'categories': dict(categories),
                   'matching_nonempty_cases': eligible, 'matching_empty_cases_excluded': empty,
-                  'selected_cases': selected, 'selection': 'full observed cases contained in named time windows [start, end)',
+                  'selected_cases': selected, 'selection': ('full observed cases contained in named time windows [start, end)'
+                                                            if selection == 'contained' else
+                                                            'full observed cases assigned to the window [start, end) containing their first observation; later events may fall after it'),
                   'max_cases_guard': max_cases,
                   'partitions': {s: {'start': a.isoformat(), 'end': b.isoformat()} for s, (a, b) in windows.items()},
                   'split': {s: {'cases': len(v), 'events': sum(map(len, v)),
@@ -221,12 +237,12 @@ def prepare_environment(path: str, name: str, partitions: dict,
                                 'activity_events': dict(Counter(row[1] for trace in v for row in trace))}
                             for s, v in splits.items()},
                   'excluded': dict(excluded), 'caveat': _SCOPE_CAVEAT},
-        'quality': dict(quality), 'date_range': [earliest.isoformat(), latest.isoformat()],
+        'quality': {**quality, 'completion_years': {str(y): n for y, n in sorted(years.items())}}, 'date_range': [earliest.isoformat(), latest.isoformat()],
         'prerequisites': {'measured_starts_available': quality['missing_starts'] == 0,
                           'missing_start_estimation_requires_explicit_consent': quality['missing_starts'] > 0},
         'assumptions': ['NOT_SET represents missing external identities. Build supplies synthetic slots; this capacity is assumed.',
                         'Equal completion timestamps preserve file order; causal order is unknown.',
-                        'Unusual years are retained and counted, not silently discarded.', _SCOPE_CAVEAT,
+                        'Unusual years are retained and counted per completion year, not silently discarded.', _SCOPE_CAVEAT,
                         'Boundary-crossing observed cases are excluded in full; their events are never truncated.'],
         'not_supported': ['Measured service durations without starts', 'Causal what-if claims',
                           'Stage 2 optimization or policy evaluation'],
@@ -237,13 +253,23 @@ def prepare_environment(path: str, name: str, partitions: dict,
     return manifest
 
 
+# PIX crisp calendars only consider (weekday, hour) slots holding a recorded start or end of that
+# resource; confidence/support/participation then filter those slots and cannot add unobserved ones.
+# Per-resource calendars therefore drop working hours of low-volume resources whose sparse
+# timestamps miss some slots, and durations are fitted against the shortened calendar. Pooled or
+# undifferentiated calendars draw on more timestamps per slot.
+_CALENDAR_TYPES = ('differentiated_by_resource', 'differentiated_by_pool', 'undifferentiated')
+_DEFAULT_SETTINGS = {'discovery_method': 'inductive', 'noise_threshold': 0.0, 'gateway_method': 'discovery',
+                     'arrival_filter_outliers': True, 'calendar_type': 'differentiated_by_resource'}
+
+
 def _discovery_settings(settings=None):
     """Validate only discovery options supported by the installed libraries."""
     if settings is None:
         settings = {}
-    if not isinstance(settings, dict) or set(settings) - {'discovery_method', 'noise_threshold', 'gateway_method', 'arrival_filter_outliers'}:
-        raise ValueError('settings accepts discovery_method, noise_threshold, gateway_method, and arrival_filter_outliers only.')
-    result = {'discovery_method': 'inductive', 'noise_threshold': 0.0, 'gateway_method': 'discovery', 'arrival_filter_outliers': True, **settings}
+    if not isinstance(settings, dict) or set(settings) - set(_DEFAULT_SETTINGS):
+        raise ValueError('settings accepts discovery_method, noise_threshold, gateway_method, arrival_filter_outliers, and calendar_type only.')
+    result = {**_DEFAULT_SETTINGS, **settings}
     if result['discovery_method'] not in ('inductive', 'heuristics'):
         raise ValueError('discovery_method must be inductive or heuristics.')
     if result['discovery_method'] == 'heuristics' and result['noise_threshold'] != 0:
@@ -255,6 +281,8 @@ def _discovery_settings(settings=None):
         raise ValueError('gateway_method must be discovery, equiprobable, or token_replay.')
     if type(result['arrival_filter_outliers']) is not bool:
         raise ValueError('arrival_filter_outliers must be boolean.')
+    if result['calendar_type'] not in _CALENDAR_TYPES:
+        raise ValueError('calendar_type must be differentiated_by_resource, differentiated_by_pool, or undifferentiated.')
     result['noise_threshold'] = float(noise)
     return result
 
@@ -360,7 +388,7 @@ def _build(name, estimate, settings=None):
     task_ids = {node.get_name(): node.get_id() for node in tasks}
     if len(task_ids) != len(tasks):
         raise ValueError('Discovered BPMN has duplicate activity labels; resource mapping would be ambiguous.')
-    resource = discover_resource_model(train, ids, CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE)).to_dict()
+    resource = discover_resource_model(train, ids, CalendarDiscoveryParameters(discovery_type=CalendarType(settings['calendar_type']))).to_dict()
     resource['task_resource_distribution'] = [d for d in resource['task_resource_distribution'] if d['task_id'] in task_ids]
     for distribution in resource['task_resource_distribution']:
         distribution['task_id'] = task_ids[distribution['task_id']]
@@ -368,7 +396,9 @@ def _build(name, estimate, settings=None):
         for r in profile['resource_list']:
             r['assignedTasks'] = [task_ids[t] for t in r['assignedTasks'] if t in task_ids]
             if r['id'] == 'NOT_SET':
-                r['amount'] = 200  # assumed external capacity for this 200-case baseline
+                # One slot per training case: external parties (vendors) do not queue behind each other.
+                # A fixed 200 was sized for the 200-case build run and saturated 10k-case evaluations.
+                r['amount'] = max(200, int(train.case_id.nunique()))
                 r['cost_per_hour'] = 0
     model_train = train[train.activity.isin(task_ids)]
     manifest['discovery_settings'] = settings
@@ -480,7 +510,9 @@ def _report(bundle, manifest, simulated, estimated):
                 'events_per_case': float(len(frame) / len(span))}
     generated = summary(simulated, 'case_id', 'activity', 'end_time', 'end_time')
     generated['median_full_span_hours'] = summary(simulated, 'case_id', 'activity', 'start_time', 'end_time')['median_case_span_hours']
-    valid = generated['cases'] == 200 and len(simulated) > 0 and (pd.to_datetime(simulated.start_time, utc=True) <= pd.to_datetime(simulated.end_time, utc=True)).all()
+    # Prosimos writes no rows for a case whose path skips every task; count it, as evaluation does.
+    generated['empty_cases'] = 200 - generated['cases']
+    valid = generated['cases'] <= 200 and len(simulated) > 0 and (pd.to_datetime(simulated.start_time, utc=True) <= pd.to_datetime(simulated.end_time, utc=True)).all()
     termination = _termination_evidence(bundle)
     valid = valid and not termination['terminated_case_count']
     fitted = pd.read_csv(bundle / 'train_fitted.csv', keep_default_na=False)
@@ -497,12 +529,12 @@ def _report(bundle, manifest, simulated, estimated):
                               'durations': 'estimated, not measured service times' if estimated else 'recorded start-to-end elapsed durations',
                               'calendars': 'PIX inferred availability, not documented staffing rosters',
                               'resource_cost': 'PIX default 20 per hour; not an observed financial input',
-                              'missing_resources': 'NOT_SET uses 200 synthetic external slots and zero cost; assumed capacity, not measured staffing',
+                              'missing_resources': 'NOT_SET uses one synthetic external slot per training case (minimum 200) and zero cost; assumed non-binding capacity, not measured staffing',
                               'estimated_start_range': [str(fitted.start_time.min()), str(fitted.start_time.max())],
                               'arrivals': 'fitted on selected training cases; category and boundary exclusions can omit competing workload'},
               'diagnosis': {'synthetic_resource_training_events': len(missing),
                             'synthetic_resource_median_estimated_duration_hours': float(estimated_duration.median()) if len(missing) else None,
-                            'interpretation': 'Missing identities use 200 synthetic external slots to avoid a single-vendor bottleneck. Inferred durations and external capacity remain assumptions; timing fidelity is unvalidated.'},
+                            'interpretation': 'Missing identities use one synthetic external slot per training case (minimum 200) so external parties do not queue on each other. Inferred durations and external capacity remain assumptions; timing fidelity is unvalidated.'},
               'versions': {p: version(p) for p in ['pm4py', 'pix-framework', 'prosimos']},
               'artifacts': ['model.bpmn', 'parameters.json', 'simulation.csv', 'simulation_statistics.csv', 'train_fitted.csv', 'build.log']}
     manifest.pop('error', None)
