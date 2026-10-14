@@ -13,6 +13,8 @@ for f in ['train.csv', 'validation.csv', 'test.csv', 'train_fitted.csv', 'manife
     if (src / f).exists(): shutil.copy(src / f, dst / f)
 ids = EventLogIDs(case='case_id', activity='activity', resource='resource', start_time='start_time', end_time='end_time')
 train = pd.read_csv(src / 'train.csv', dtype={'case_id': str})
+if train.start_time.isna().all():  # completion-only log: use the build's estimated starts (train_fitted.csv)
+    train = pd.read_csv(src / 'train_fitted.csv', dtype={'case_id': str})[list(train.columns)]
 for c in ['start_time', 'end_time']: train[c] = pd.to_datetime(train[c], format='mixed', utc=True)
 # ponytail: the enhancer only finds elements in the default BPMN namespace; pm4py writes a bpmn: prefix. Same XML, renamed prefix.
 xml = (src / 'model.bpmn').read_text().replace('xmlns:bpmn=', 'xmlns=').replace('<bpmn:', '<').replace('</bpmn:', '</')
