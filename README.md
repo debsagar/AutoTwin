@@ -1,179 +1,75 @@
 # AutoTwin
 
-**Give AutoTwin a process event log. Get a process simulation, a report on how well it matches the log, and evidence for what to investigate next.**
+**A simulated copy of a company, built from its business records, so you can ask "what if" before changing the real thing.**
 
-Use it from the terminal: ask a question, let the agent inspect the data and run experiments, then review its results. You can follow its work and ask it to change direction.
+Each process (selling, making, buying) becomes a simulation model learned from event logs. The models are linked: customer orders set production, production uses stock, low stock triggers purchases. Change a setting, such as supplier speed, demand or factory capacity, and the whole chain shows the effect. An AI agent builds and runs this, and a person checks the results at key points.
 
-## What goes in, what comes out
+Progress page with charts and plain-language detail: [AutoTwin progress](https://claude.ai/artifact/Nm8sTjHfD2zAus9vZ1wLQV)
 
-**Input:** an XES event log. Each event identifies a case (such as a purchase order), an activity, and when it finished. Recorded start times and resource identities help reconstruct timing and workload. Other file formats need conversion first.
+## Architecture
 
-**Output:**
-
-- An executable process model: a BPMN diagram and simulation parameters.
-- A comparison with recorded cases: process paths, completion times, arrival patterns, and differences across simulation runs.
-- An interactive HTML replay showing cases moving through activities, with timing and evaluation results.
-- A written report explaining the findings, assumptions, and remaining gaps.
-
-The first stage reconstructs and checks the process. The next stage uses that model to investigate changes. Costs, service targets, staffing rules, and what can actually change need to come from you; the log does not establish them.
-
-## How it works
-
-[![AutoTwin architecture: a terminal agent calls process tools and writes code in isolated Docker workers, reviews returned evidence, and produces a model, report, and replay.](docs/images/architecture.gif)](docs/images/architecture.svg)
-
-[Open the full-size, static diagram](docs/images/architecture.svg). The animation illustrates tool calls and returned evidence; it is not a recording of a run.
-
-<details>
-<summary><strong>Tools available to the agent</strong></summary>
-
-| Tool | What it does |
-|---|---|
-| `inspect_log_scope` | Check full-log coverage, categories, and case dates before choosing a scope. |
-| `discover_process` | Inspect activity paths, variants, and resource handovers in a disclosed log prefix. |
-| `prepare_environment` | Create chronological training, validation, and test partitions; record exclusions. |
-| `build_environment` | Discover the process, fit simulation parameters, and check execution. |
-| `inspect_environment` | Examine recorded and simulated paths, repetitions, and timing. |
-| `revise_environment` | Build a separate candidate with revised discovery settings and a stated reason. |
-| `evaluate_environment` | Compare the model and simulated logs with recorded cases across selected seeds. |
-| `compare_evaluations` | Compare results and flag incompatible evaluation settings. |
-| `export_view` | Export an offline Three.js replay with evaluation summaries. |
-| `compare_scenario` | Test duration or headcount changes against a preserved baseline; export before/after results with uncertainty. |
-
-The agent can also **write its own analysis code** using `execute`, and inspect or change workspace files through `read_file`, `write_file`, `edit_file`, `delete`, `ls`, `glob`, and `grep`.
-
-Outside the worker, `task` delegates work to subagents; `ask_user` requests input; `write_todos` tracks work; and `compact_conversation` manages long conversations. Research uses `fetch_url` and, with a `TAVILY_API_KEY`, `web_search`. Subagents use the same sandbox boundaries.
-
-Skills guide discovery, environment generation, Stage 1, and Stage 2. The agent chooses which tools to use; the diagram's groups are capabilities, not mandatory steps.
-
-The diagram follows [C4's guidance on labelled relationships](https://c4model.com/diagrams/checklist) and [Anthropic's tool-and-feedback agent pattern](https://www.anthropic.com/engineering/building-effective-agents). GitHub supports the GIF preview; the SVG remains the editable, static source. Regenerate the animation with:
-
-```sh
-uv run --with cairosvg --with pillow python scripts/render_architecture.py
+```mermaid
+flowchart LR
+  subgraph Records["Company records"]
+    CRM["CRM<br/>leads, deals"]
+    ERP["ERP<br/>orders, stock, purchases"]
+    MES["MES<br/>factory batches"]
+  end
+  subgraph World["World model (simulation)"]
+    S["Selling model"] --> F["Factory"] --> W["Stock + reorder rule"] --> B["Buying model"]
+    B -- deliveries --> W
+  end
+  X["Outside factors<br/>supplier speed, demand"] --> World
+  ERP --> S
+  ERP --> B
+  MES -.-> F
+  CRM -.-> S
+  A["AI agent"] -- "builds models, runs what-ifs" --> World
+  H["Person"] -- "approves changes, reviews results" --> A
 ```
 
-These rendering packages are only needed to update the illustration, not to run AutoTwin.
+Solid arrows exist today. Dotted arrows are planned: there is no CRM or MES data yet, so the factory is a rule we set.
 
-</details>
+## Status (paint-company example, 14 Oct 2026)
 
-## Worked example: purchasing through invoice payment
+| Part of the vision | Status |
+|---|---|
+| Linked processes (selling → making → stock → buying) | Done |
+| Models learned from event logs | Done, from public and synthetic stand-in logs, not a real company's records |
+| What-ifs across the whole chain | Done |
+| Outside factors | Started: supplier speed; demand can be scaled |
+| AI agent runs it with human checkpoints | Not yet. Built by hand with an AI coding assistant; next step is the product agent reproducing it |
+| AI agents playing roles (buyer, planner) | Not yet |
 
-We used a [published synthetic procurement log](https://zenodo.org/records/10435849): **1,000 cases, 13,290 events, and 24 activities**, covering requisitions, quotations, delivery, and payment. This is a generated research dataset, not a company's production history.
+What-ifs over 8 weeks of simulated orders:
 
-AutoTwin built a simulation, compared it with later recorded cases, and kept a frozen model for follow-up analysis. In the five-run final assessment, the mean cycle-time ratio was about **1.22×** the recorded value and cycle-time distance averaged **9.55 hours**. No false early endings were observed in those checks. Timing differences remained, so this is a development baseline, not a validated replica of a business.
+| Scenario | Units made / ordered | Avg wait, order → made |
+|---|---|---|
+| Today | 100,200 / 100,320 | 1.2 days |
+| Suppliers 3× slower | 84,000 / 100,320 | 5.6 days |
+| Suppliers 3× slower, double safety stock | 100,200 / 100,320 | 1.2 days |
+| Sales +30% | 116,312 / 130,416 | 4.5 days |
+| Sales +30%, factory capacity +30% | 130,260 / 130,416 | 1.2 days |
 
-We then asked it to **diagnose the baseline and propose one improvement without removing approvals**. It wrote and ran an analysis against the saved evidence:
+A supplier problem travels through stock and production to customers; doubling safety stock cancels it. Every made-up number is listed in `ASSUMPTIONS` at the top of `linked_world.py`.
 
-| Finding in the validation data | Result |
-|---|---:|
-| Cases ending in invoice payment | 118 of 221 |
-| Mean time to payment for those cases | 61.76 hours |
-| Mean time across all cases, including early endings | 34.95 hours |
-| Delivery and quotation-comparison intervals combined | 63.5% of paid-case time |
+## Run it
 
-The distinction matters: early-ending cases make the overall average look faster. The activity intervals also include non-working hours; they are not all removable work.
-
-**Proposed experiment:** use structured supplier quotes or a comparison template, modeled as a 20% reduction in quotation-comparison working duration. Keep approvals, staffing, schedules, and routing unchanged.
-
-**Follow-up:** AutoTwin later tested this assumption in simulation. Across 30 pairs of 500 cases, modeled mean time to payment fell from 79.6 to 70.5 hours. The estimated reduction was 9.1 hours (95% simulation interval: 5.0–13.2 hours). These are simulated results on a synthetic process, not demonstrated business savings. See **Test an improvement** below to run the same kind of experiment.
-
-## Clone and run
-
-You need **Python 3.12**, [uv](https://docs.astral.sh/uv/getting-started/installation/), a running Docker engine, and an OpenRouter API key. Model calls incur API charges.
+Needs Python 3.12 and [uv](https://docs.astral.sh/uv/). The linked world needs the local model checkpoints under `runs/` (not in the repo).
 
 ```sh
-git clone https://github.com/debsagar/AutoTwin.git
-cd AutoTwin
 uv sync --frozen
-mkdir -p .dcode
-cp -n .deepagents/config.example.toml .dcode/config.toml
-export OPENROUTER_API_KEY="your-key"
+uv run python linked_world.py --sales                                        # baseline
+uv run python linked_world.py --sales external.supplier_lead_factor=3         # a what-if
+uv run python linked_world.py --sales sales.units_per_item=104 max_batch_units=3900
+```
+
+Results go to `runs/linked/`. The product agent (terminal chat that builds single-process models from a log) also needs Docker and an OpenRouter key:
+
+```sh
+mkdir -p .dcode && cp -n .deepagents/config.example.toml .dcode/config.toml
 docker build -t autotwin-worker:local .
 uv run python main.py
 ```
 
-CLI preferences and conversation history stay local under `.dcode/`, outside Git.
-The copy command preserves an existing configuration.
-
-The default model is `openrouter:openai/gpt-5.6-luna`. To choose another available model, append `--model openrouter:<model-id>` to the launch command.
-
-### Try the example dataset
-
-Before opening the CLI, download the published sample and convert it to XES:
-
-```sh
-uv run python scripts/fetch_example.py
-uv run python main.py
-```
-
-Inside the CLI, enter:
-
-```text
-/skill:stage1 data/benchmark/p2p_synthetic.xes — reconstruct the process, validate against later cases, compare at most two evidence-backed revisions, and export the replay and report.
-```
-
-The download script verifies the archive and preserves case IDs, activities, resources, and start/end timestamps. It does not download the reference model into the agent's workspace.
-
-This reproduces the **workflow on the same input**, not the exact saved conversation or scores: the agent chooses its analysis and model settings. Historical runs and checkpoints are not included in the repository.
-
-### Read the results and continue
-
-Each conversation saves its work under `runs/workspaces/<thread-id>/`. Start with `report.md`; model files and `environment.html` live under `environments/<candidate>/`. Open the HTML in a browser. On a remote VM, download it first; it works offline.
-
-Resume your latest interactive conversation with:
-
-```sh
-uv run python main.py -r
-```
-
-Once a baseline is ready, ask in that conversation:
-
-```text
-Diagnose this baseline and propose one improvement experiment. Explain the evidence and the business inputs needed before running it.
-```
-
-Inputs remain read-only; generated files stay in the conversation's workspace. Rebuild the Docker image after changing tools or skills. Data, runs, local sessions, and credentials are excluded from Git.
-
-For the next stage's methodology, see [the process-improvement workflow](docs/stage2-workflow.md).
-
-## Test an improvement
-
-After Stage 1, stay in the same CLI conversation and enter:
-
-```text
-/skill:stage2 Test a hypothetical 20% reduction in working duration for
-Create Quotation comparison Map. Keep quality, routing and staffing unchanged.
-Use Pay invoice as the successful outcome. Run 30 pairs of 500 cases and
-show the before-and-after results. Do not assume costs or an SLA.
-```
-
-Use the exact activity names in your model. The agent selects the source model,
-records assumptions, runs the comparison and writes
-`experiments/<name>/comparison.html` plus the supporting report and run logs.
-The page opens offline in a browser. It shows completion times, successful
-outcomes, uncertainty, and optional SLA and staffing-budget comparisons.
-
-For an existing local frozen checkpoint, start a fresh conversation with
-`uv run python main.py --checkpoint NAME` first. Checkpoints are local artifacts,
-not bundled with the repository. Rebuild the worker after updating source:
-`docker build -t autotwin-worker:local .`.
-
-The worked example above tests this scenario workflow. It does not validate the
-checkpoint for operational decisions. No costs were supplied, so no financial
-benefit is claimed.
-
-## Development checks
-
-Run the local checks without an API key or downloaded datasets:
-
-```sh
-for check in temporal_selection_check.py model_tools_check.py calibration_build_check.py workspace_check.py scenario_check.py; do
-  uv run --frozen python "$check" || exit 1
-done
-```
-
-`uv run --frozen python sandbox_check.py` additionally checks real Docker isolation.
-It requires the worker image, example dataset and local `p2p_heuristics_v1`
-checkpoint; that checkpoint is not shipped with a clone.
-
-The web app is planned, not implemented. The [frontend brief](docs/apromore-reference.md)
-separates existing capabilities from proposed screens and human checkpoints.
+Developer state: `HANDOFF.md` (current steps, assumptions, open issues) and `PROJECT-LOG.jsonl` (full history).
